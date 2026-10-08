@@ -1,0 +1,81 @@
+{
+  "schema": "field.venue-discovery.v0",
+  "venueId": "gilt-house",
+  "experienceId": "gilt-house",
+  "platformId": "gilt-house-standalone",
+  "displayName": "Gilt House",
+  "category": "ENTERTAINMENT_SIMULATION",
+  "entry": {
+    "relativePath": "/",
+    "deploymentUrl": null
+  },
+  "productBoundary": {
+    "status": "INDEPENDENT_PRODUCT",
+    "distribution": "SEPARATE_APP_AND_DEPLOYMENT",
+    "paidNeonRoyalDependency": false,
+    "inheritsPaidAppLicense": false,
+    "sharesAuthentication": false,
+    "sharesPaymentProcessing": false,
+    "sharesCustomerEntitlements": false,
+    "sharesDatabase": false,
+    "sharesApiKeys": false,
+    "sharesGameChipsWithRealMoney": false,
+    "paidAppLaunchDependsOnThis": false,
+    "sharedDeploymentOrigin": false
+  },
+  "world": {
+    "plannedMode": "INDEPENDENT_VIRTUAL_WORLD",
+    "implementationStatus": "PROPOSED",
+    "requiresCommercialCityApp": false
+  },
+  "capabilities": [
+    {
+      "id": "casino-table-games",
+      "status": "CODE_PRESENT_UNQUALIFIED"
+    },
+    {
+      "id": "sports-scoreboard",
+      "status": "CODE_PRESENT_UNQUALIFIED"
+    },
+    {
+      "id": "agent-sports-simulations",
+      "status": "CODE_PRESENT_UNQUALIFIED"
+    },
+    {
+      "id": "webxr-arena",
+      "status": "CODE_PRESENT_UNQUALIFIED"
+    },
+    {
+      "id": "probability-training-workshop",
+      "status": "CODE_PRESENT_UNQUALIFIED"
+    }
+  ],
+  "economy": {
+    "chipType": "NONREDEEMABLE_PLAY_ONLY",
+    "cashValue": false,
+    "transferable": false,
+    "redeemable": false,
+    "apiCreditConvertible": false,
+    "realMoneyWagering": false
+  },
+  "training": {
+    "agentsAre": "RULE_BASED_SIMULATION_NOT_LLM",
+    "verifiedSkillsExport": false,
+    "remoteAgentControl": false,
+    "modelTrainingEnabled": false
+  },
+  "integrations": {
+    "phibots": "PROPOSED",
+    "brainc": "PROPOSED",
+    "nbg": "PROPOSED",
+    "budgetgenius": "PROPOSED"
+  },
+  "authority": {
+    "mode": "DISCOVERY_ONLY",
+    "grantsExecution": false,
+    "grantsPayments": false,
+    "grantsAgentAccess": false,
+    "grantsApiSpend": false
+  },
+  "note": "Independent Gilt House entertainment discovery metadata only. No link to, access to, or dependency on the separately sold Neon Royal travel app."
+}
