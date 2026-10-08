@@ -1,22 +1,22 @@
-name: Gilt venue discovery contract
+name: Gilt House standalone boundary contract
 
 on:
   pull_request:
     paths:
       - "public/bridge/**"
-      - "docs/NEON-ROYAL-BRIDGE-R0.md"
+      - "docs/GILTHOUSE-STANDALONE-BOUNDARY-R0.md"
       - "scripts/gilt-venue-manifest.test.mjs"
       - ".github/workflows/venue-discovery-contract.yml"
   push:
     branches: [main]
     paths:
       - "public/bridge/**"
-      - "docs/NEON-ROYAL-BRIDGE-R0.md"
+      - "docs/GILTHOUSE-STANDALONE-BOUNDARY-R0.md"
       - "scripts/gilt-venue-manifest.test.mjs"
       - ".github/workflows/venue-discovery-contract.yml"
 
 jobs:
-  discovery-contract:
+  standalone-contract:
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -25,5 +25,5 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-      - name: Validate read-only venue advertisement
+      - name: Enforce independence from paid Neon Royal product
         run: node --test scripts/gilt-venue-manifest.test.mjs
