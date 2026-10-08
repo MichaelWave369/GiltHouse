@@ -1,0 +1,239 @@
+@import "tailwindcss";
+
+@theme {
+  --font-display: "Cormorant Garamond", "Iowan Old Style", Palatino, serif;
+  --font-sans: "Outfit", "Avenir Next", system-ui, sans-serif;
+
+  --color-ink: #0b0807;
+  --color-ink-2: #16100d;
+  --color-panel: #2a1814;
+  --color-line: #5c3b2c;
+  --color-cream: #f7edd6;
+  --color-cream-dim: #cbb89a;
+  --color-gold: #e6c36a;
+  --color-felt: #0f3d34;
+  --color-felt-deep: #0a2c26;
+  --color-oxblood: #8c2436;
+}
+
+@layer base {
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+
+  html,
+  body {
+    background: var(--color-ink);
+    color: var(--color-cream);
+    color-scheme: dark;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    min-height: 100vh;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-gold);
+    outline-offset: 2px;
+  }
+}
+
+.room {
+  background: transparent;
+}
+
+.press {
+  transition: transform 200ms cubic-bezier(0.16, 1, 0.3, 1), border-color 240ms ease, background-color 240ms ease;
+}
+
+.press:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+.rise {
+  animation: rise 440ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
+}
+
+.stagger > :nth-child(1) { animation-delay: 0ms; }
+.stagger > :nth-child(2) { animation-delay: 40ms; }
+.stagger > :nth-child(3) { animation-delay: 80ms; }
+.stagger > :nth-child(4) { animation-delay: 120ms; }
+.stagger > :nth-child(5) { animation-delay: 160ms; }
+.stagger > :nth-child(6) { animation-delay: 200ms; }
+.stagger > :nth-child(7) { animation-delay: 240ms; }
+.stagger > :nth-child(8) { animation-delay: 280ms; }
+.stagger > :nth-child(9) { animation-delay: 320ms; }
+.stagger > :nth-child(10) { animation-delay: 360ms; }
+.stagger > :nth-child(11) { animation-delay: 400ms; }
+
+.deal {
+  animation: deal 640ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
+  transform-origin: center top;
+}
+
+.bank-pop {
+  display: inline-block;
+  animation: bankpop 520ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
+}
+
+.win-note,
+.win-pulse {
+  animation: winglow 720ms ease-out;
+}
+
+.marquee {
+  color: var(--color-cream);
+  text-shadow: 0 0 18px color-mix(in srgb, var(--color-gold) 55%, transparent);
+}
+
+.crown-glow {
+  animation: crown 2.8s ease-in-out infinite;
+}
+
+.table-card {
+  background-color: var(--color-panel);
+  background-image: radial-gradient(
+    120% 90% at 100% 0%,
+    color-mix(in srgb, var(--color-oxblood) 72%, transparent),
+    transparent 58%
+  );
+  transition: transform 320ms cubic-bezier(0.16, 1, 0.3, 1), border-color 240ms ease;
+}
+
+.table-card:hover {
+  transform: translateY(-2px);
+}
+
+.table-card:active {
+  transform: scale(0.96);
+}
+
+.felt-well {
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--color-gold) 38%, transparent),
+    inset 0 22px 46px color-mix(in srgb, black 32%, transparent);
+}
+
+.wheel-bezel {
+  box-shadow:
+    0 0 0 6px var(--color-ink),
+    0 0 0 9px var(--color-gold),
+    0 0 36px color-mix(in srgb, var(--color-gold) 35%, transparent);
+}
+
+.reel-spin {
+  animation: reel 0.48s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+
+.reel-land {
+  animation: land 420ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.piano-rail {
+  box-shadow:
+    0 16px 40px color-mix(in srgb, black 48%, transparent),
+    inset 0 0 0 1px color-mix(in srgb, var(--color-gold) 28%, transparent);
+}
+
+.pianist-sway {
+  transform-origin: 50% 88%;
+  animation: sway 3.8s cubic-bezier(0.45, 0, 0.55, 1) infinite alternate;
+}
+
+.pianist-arm {
+  transform-box: fill-box;
+  transform-origin: 0% 20%;
+  animation: arm 0.86s cubic-bezier(0.45, 0, 0.55, 1) infinite alternate;
+}
+
+.pianist-hands {
+  transition: left 280ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+    filter: blur(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+}
+
+@keyframes deal {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) rotate(-3deg);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes bankpop {
+  0% { transform: scale(1); }
+  45% { transform: scale(1.04); }
+  100% { transform: scale(1); }
+}
+
+@keyframes winglow {
+  0% { filter: brightness(1); }
+  35% { filter: brightness(1.35); }
+  100% { filter: brightness(1); }
+}
+
+@keyframes crown {
+  0%,
+  100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-gold) 0%, transparent); }
+  50% { box-shadow: 0 0 18px 1px color-mix(in srgb, var(--color-gold) 55%, transparent); }
+}
+
+@keyframes reel {
+  0% { transform: translateY(-14%); }
+  100% { transform: translateY(14%); }
+}
+
+@keyframes land {
+  0% { transform: translateY(-6%); }
+  100% { transform: translateY(0); }
+}
+
+@keyframes sway {
+  from { transform: rotate(-1.8deg); }
+  to { transform: rotate(1.8deg); }
+}
+
+@keyframes arm {
+  from { transform: rotate(-6deg); }
+  to { transform: rotate(5deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .press:active:not(:disabled),
+  .table-card:hover,
+  .table-card:active {
+    transform: none;
+  }
+
+  .rise,
+  .deal,
+  .bank-pop,
+  .win-note,
+  .win-pulse,
+  .crown-glow,
+  .reel-spin,
+  .reel-land,
+  .pianist-sway,
+  .pianist-arm {
+    animation: none;
+    filter: none;
+  }
+}

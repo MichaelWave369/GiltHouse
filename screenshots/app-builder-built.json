@@ -1,0 +1,38 @@
+{
+  "url": "http://127.0.0.1:8081/",
+  "viewports": {
+    "desktop": {
+      "width": 1280,
+      "height": 800,
+      "status": 200,
+      "title": "Gilt House",
+      "hasCanvas": true,
+      "bodyTextLen": 1467,
+      "bodyTextHash": "133e9519a3dbcba483f7f26f2a08799eab9ea71496554ed1b143f9f71dd07f03",
+      "bodyTextPrefix": "HOUSE PIANO THE BAR LAS VEGAS · CHIPS ONLY Gilt House 2,500 The ",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/app-builder-built.png"
+    },
+    "mobile": {
+      "width": 390,
+      "height": 844,
+      "status": 200,
+      "title": "Gilt House",
+      "hasCanvas": true,
+      "bodyTextLen": 1467,
+      "bodyTextHash": "6e8fc94f1508878726971e09c7789a0fc00e01e118e038c3b559c55c959d6532",
+      "bodyTextPrefix": "LAS VEGAS · CHIPS ONLY Gilt House 2,500 The wire is live. The ag",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/app-builder-built-mobile.png"
+    }
+  },
+  "brandWarnings": [],
+  "authWarnings": [],
+  "verdictFile": "/workspace/screenshots/app-builder-built.json",
+  "divergesFromBaseline": false,
+  "baselineReasons": []
+}
