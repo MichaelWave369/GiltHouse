@@ -14,7 +14,7 @@ export const Route = createRootRoute({
       {
         name: "description",
         content:
-          "Gilt House is a supper-club of play chips. Blackjack, roulette, craps, baccarat, draw poker, and slots. Chips have no cash value.",
+          "Gilt House is a supper-club of play chips and The Neon Block, a walkable fictional district. Chips and street tokens have no cash value.",
       },
       { name: "theme-color", content: "#0b0807" },
     ],

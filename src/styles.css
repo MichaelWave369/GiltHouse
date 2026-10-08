@@ -237,3 +237,16 @@
     filter: none;
   }
 }
+
+.world-root {
+  height: 100dvh;
+  width: 100%;
+  overflow: hidden;
+  background: var(--color-ink);
+}
+
+.pixel-screen {
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+

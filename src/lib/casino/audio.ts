@@ -2,6 +2,8 @@ let ctx: AudioContext | null = null;
 let master: GainNode | null = null;
 let sfx: GainNode | null = null;
 let music: GainNode | null = null;
+let blockBus: GainNode | null = null;
+let streetSfx: GainNode | null = null;
 let noiseBuf: AudioBuffer | null = null;
 let loungeWanted = false;
 let loungeRunning = false;
@@ -9,6 +11,12 @@ let loungeTimer = 0;
 let nextNote = 0;
 let beat = 0;
 let loungeGen = 0;
+let blockWanted = false;
+let blockRunning = false;
+let blockTimer = 0;
+let blockNext = 0;
+let blockBeat = 0;
+let blockVariant = "default";
 
 const QUARTER = 0.86;
 
@@ -48,6 +56,12 @@ function ensure() {
   music.gain.value = 0.0001;
   sfx.connect(master);
   music.connect(master);
+  blockBus = ctx.createGain();
+  blockBus.gain.value = 0.0001;
+  streetSfx = ctx.createGain();
+  streetSfx.gain.value = 0.9;
+  blockBus.connect(master);
+  streetSfx.connect(master);
   master.connect(ctx.destination);
   noiseBuf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.35), ctx.sampleRate);
   const data = noiseBuf.getChannelData(0);
@@ -59,6 +73,7 @@ export function unlockAudio() {
   ensure();
   if (ctx?.state === "suspended") void ctx.resume();
   if (loungeWanted) startLounge();
+  if (blockWanted) startBlock();
 }
 
 if (typeof document !== "undefined") {
@@ -69,6 +84,10 @@ if (typeof document !== "undefined") {
 
 export function setLounge(on: boolean) {
   loungeWanted = on;
+  if (on) {
+    blockWanted = false;
+    stopBlock();
+  }
   if (!on) stopLounge();
   else if (ctx && ctx.state === "running") startLounge();
 }
@@ -286,3 +305,99 @@ export function playCue(cue: Cue, enabled: boolean) {
   }
   if (cue === "lose") slide(220, 92, 0.32, 0.04);
 }
+
+const BLOCK_BASS = [110, 98, 87.31, 82.41];
+const BLOCK_LEAD = [
+  [220, 261.63, 246.94, 196],
+  [174.61, 196, 220, 164.81],
+  [246.94, 220, 196, 174.61],
+  [196, 164.81, 146.83, 174.61],
+];
+
+export function setStreetMix(musicVol: number, sfxVol: number) {
+  if (!blockBus || !streetSfx || !ctx) return;
+  const m = Math.max(0, Math.min(1, musicVol));
+  const s = Math.max(0, Math.min(1, sfxVol));
+  blockBus.gain.setTargetAtTime(blockRunning ? 0.34 * m : 0.0001, ctx.currentTime, 0.08);
+  streetSfx.gain.setTargetAtTime(0.9 * s, ctx.currentTime, 0.05);
+}
+
+export function setBlockVariant(name: string | null) {
+  blockVariant = name && name.length > 0 ? name : "default";
+}
+
+export function setBlockMusic(on: boolean) {
+  blockWanted = on;
+  if (on) {
+    loungeWanted = false;
+    stopLounge();
+    if (ctx && ctx.state === "running") startBlock();
+  } else stopBlock();
+}
+
+function startBlock() {
+  if (!ctx || !blockBus || blockRunning) return;
+  blockRunning = true;
+  blockNext = ctx.currentTime + 0.06;
+  blockBus.gain.cancelScheduledValues(ctx.currentTime);
+  blockBus.gain.setTargetAtTime(0.34, ctx.currentTime, 0.45);
+  if (!blockTimer) blockTimer = window.setInterval(blockTick, 100);
+}
+
+function stopBlock() {
+  blockRunning = false;
+  if (blockTimer) {
+    window.clearInterval(blockTimer);
+    blockTimer = 0;
+  }
+  if (ctx && blockBus) {
+    blockBus.gain.cancelScheduledValues(ctx.currentTime);
+    blockBus.gain.setTargetAtTime(0.0001, ctx.currentTime, 0.1);
+  }
+}
+
+function blockTick() {
+  if (!blockRunning || !ctx || ctx.state !== "running" || !blockBus) return;
+  if (blockNext < ctx.currentTime) blockNext = ctx.currentTime + 0.05;
+  while (blockNext < ctx.currentTime + 0.28) {
+    const mul =
+      blockVariant === "static" ? 1.18 : blockVariant === "comet" ? 1.42 : blockVariant === "griddle" ? 0.82 : 1;
+    const bar = Math.floor(blockBeat / 4) % 4;
+    const step = blockBeat % 4;
+    const when = blockNext;
+    toneAt(blockBus, (BLOCK_BASS[bar] ?? 110) * (blockVariant === "griddle" ? 0.9 : 1), when, 0.42, "triangle", 0.05);
+    const lead = BLOCK_LEAD[bar]?.[step];
+    if (lead && step % 2 === 0) toneAt(blockBus, lead * mul, when, 0.28, "sine", 0.028);
+    if (step === 0) toneAt(blockBus, (BLOCK_BASS[bar] ?? 110) * 2, when, 0.16, "triangle", 0.015);
+    blockBeat += 1;
+    blockNext += 0.48;
+  }
+}
+
+export type StreetCue = "step" | "door" | "buy" | "talk" | "neon" | "good" | "nope";
+
+export function playStreetCue(cue: StreetCue, enabled: boolean) {
+  if (!enabled) return;
+  unlockAudio();
+  if (!ctx || !streetSfx) return;
+  const now = ctx.currentTime;
+  if (cue === "step") toneAt(streetSfx, 90, now, 0.04, "sine", 0.02);
+  if (cue === "door") {
+    toneAt(streetSfx, 523, now, 0.08, "triangle", 0.03);
+    toneAt(streetSfx, 784, now + 0.06, 0.1, "sine", 0.02);
+  }
+  if (cue === "buy") {
+    toneAt(streetSfx, 880, now, 0.07, "square", 0.02);
+    toneAt(streetSfx, 1174, now + 0.07, 0.09, "square", 0.018);
+    toneAt(streetSfx, 1760, now + 0.14, 0.08, "sine", 0.012);
+  }
+  if (cue === "talk") toneAt(streetSfx, 660, now, 0.07, "triangle", 0.03);
+  if (cue === "neon") toneAt(streetSfx, 1400, now, 0.05, "square", 0.012);
+  if (cue === "good") {
+    toneAt(streetSfx, 523, now, 0.1, "triangle", 0.04);
+    toneAt(streetSfx, 659, now + 0.08, 0.12, "triangle", 0.04);
+    toneAt(streetSfx, 784, now + 0.16, 0.14, "sine", 0.035);
+  }
+  if (cue === "nope") slide(300, 140, 0.18, 0.03);
+}
+

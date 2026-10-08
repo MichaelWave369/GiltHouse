@@ -3,6 +3,7 @@ import { agentPayout, freshMatch, gradeAgent, stepMatch, type AgentBet, type Age
 import type { Ticket } from "@/lib/casino/sports";
 
 const KEY = "gilt-house-v1";
+export const CHIP_STORAGE_KEY = KEY;
 export const OPENING_BANK = 2500;
 
 export type View =
