@@ -1,0 +1,63 @@
+{
+  "schema": "field.venue-discovery.v0",
+  "venueId": "gilt-house",
+  "experienceId": "neon-royal",
+  "platformId": "city369",
+  "displayName": "Gilt House",
+  "category": "ENTERTAINMENT_SIMULATION",
+  "entry": {
+    "relativePath": "/",
+    "deploymentUrl": null
+  },
+  "capabilities": [
+    {
+      "id": "casino-table-games",
+      "status": "CODE_PRESENT_UNQUALIFIED"
+    },
+    {
+      "id": "sports-scoreboard",
+      "status": "CODE_PRESENT_UNQUALIFIED"
+    },
+    {
+      "id": "agent-sports-simulations",
+      "status": "CODE_PRESENT_UNQUALIFIED"
+    },
+    {
+      "id": "webxr-arena",
+      "status": "CODE_PRESENT_UNQUALIFIED"
+    },
+    {
+      "id": "probability-training-workshop",
+      "status": "CODE_PRESENT_UNQUALIFIED"
+    }
+  ],
+  "economy": {
+    "chipType": "NONREDEEMABLE_PLAY_ONLY",
+    "cashValue": false,
+    "transferable": false,
+    "redeemable": false,
+    "apiCreditConvertible": false,
+    "realMoneyWagering": false
+  },
+  "training": {
+    "agentsAre": "RULE_BASED_SIMULATION_NOT_LLM",
+    "verifiedSkillsExport": false,
+    "remoteAgentControl": false,
+    "modelTrainingEnabled": false
+  },
+  "integrations": {
+    "city369": "PROPOSED",
+    "phibots": "PROPOSED",
+    "brainc": "PROPOSED",
+    "nbg": "PROPOSED",
+    "budgetgenius": "PROPOSED"
+  },
+  "authority": {
+    "mode": "DISCOVERY_ONLY",
+    "grantsExecution": false,
+    "grantsPayments": false,
+    "grantsAgentAccess": false,
+    "grantsApiSpend": false
+  },
+  "note": "Untrusted public discovery metadata only. Does not prove deployment health, age suitability, regulatory status, identity, training results, or permission."
+}
