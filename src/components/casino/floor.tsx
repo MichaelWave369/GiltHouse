@@ -76,6 +76,13 @@ const TABLES = [
     icon: BookOpen,
   },
   {
+    id: "training" as const,
+    name: "Training Lab",
+    kicker: "No chips · no cloud",
+    copy: "Repeatable probability challenges. Review the answers and export local practice evidence.",
+    icon: BookOpen,
+  },
+  {
     id: "agents" as const,
     name: "The Agents",
     kicker: "3D · VR",
