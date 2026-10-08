@@ -17,6 +17,7 @@ import { Roulette } from "@/components/casino/roulette";
 import { Slots } from "@/components/casino/slots";
 import { Sportsbook } from "@/components/casino/sportsbook";
 import { Workshop } from "@/components/casino/workshop";
+import { TrainingLab } from "@/components/casino/training-lab";
 
 export function CasinoApp() {
   const view = useCasino((s) => s.view);
@@ -73,6 +74,8 @@ export function CasinoApp() {
           <Sportsbook />
         ) : view === "workshop" ? (
           <Workshop />
+        ) : view === "training" ? (
+          <TrainingLab />
         ) : view === "agents" ? (
           <Agents />
         ) : (

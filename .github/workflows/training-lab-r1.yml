@@ -1,0 +1,43 @@
+name: Gilt House training lab R1
+
+on:
+  pull_request:
+    paths:
+      - "src/lib/casino/training-lab.ts"
+      - "src/lib/casino/training-lab.test.ts"
+      - "src/components/casino/training-lab.tsx"
+      - "src/components/casino/app.tsx"
+      - "src/components/casino/floor.tsx"
+      - "src/lib/casino/store.ts"
+      - "docs/GILTHOUSE-TRAINING-LAB-R1.md"
+      - ".github/workflows/training-lab-r1.yml"
+  push:
+    branches: [main]
+    paths:
+      - "src/lib/casino/training-lab.ts"
+      - "src/lib/casino/training-lab.test.ts"
+      - "src/components/casino/training-lab.tsx"
+      - "src/components/casino/app.tsx"
+      - "src/components/casino/floor.tsx"
+      - "src/lib/casino/store.ts"
+      - "docs/GILTHOUSE-TRAINING-LAB-R1.md"
+      - ".github/workflows/training-lab-r1.yml"
+
+jobs:
+  practice-contract:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Practice scoring and trust tests
+        run: node --experimental-strip-types --test src/lib/casino/training-lab.test.ts
+      - name: Standalone product boundary tests
+        run: node --test scripts/gilt-venue-manifest.test.mjs
+      - name: Install packages
+        run: npm ci --no-audit --no-fund
+      - name: Typecheck app
+        run: npm run typecheck

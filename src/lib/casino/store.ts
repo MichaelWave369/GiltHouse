@@ -17,6 +17,7 @@ export type View =
   | "afterhours"
   | "sports"
   | "workshop"
+  | "training"
   | "agents";
 export type LedgerGame =
   | "blackjack"
