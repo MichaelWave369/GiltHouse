@@ -1,0 +1,29 @@
+name: Gilt venue discovery contract
+
+on:
+  pull_request:
+    paths:
+      - "public/bridge/**"
+      - "docs/NEON-ROYAL-BRIDGE-R0.md"
+      - "scripts/gilt-venue-manifest.test.mjs"
+      - ".github/workflows/venue-discovery-contract.yml"
+  push:
+    branches: [main]
+    paths:
+      - "public/bridge/**"
+      - "docs/NEON-ROYAL-BRIDGE-R0.md"
+      - "scripts/gilt-venue-manifest.test.mjs"
+      - ".github/workflows/venue-discovery-contract.yml"
+
+jobs:
+  discovery-contract:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Validate read-only venue advertisement
+        run: node --test scripts/gilt-venue-manifest.test.mjs
