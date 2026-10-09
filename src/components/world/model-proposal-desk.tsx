@@ -37,7 +37,7 @@ export function ModelProposalDesk({ snapshot }: { snapshot: WorldState }) {
       walkPhase: cursor,
       reduced: true,
     });
-  }, [snapshot, x, cursor, currentStep]);
+  }, [snapshot, x, cursor, currentStep, inspected]);
 
   function updateRaw(next: string) {
     setRaw(next.slice(0, MAX_MODEL_PROPOSAL_CHARS));
