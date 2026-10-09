@@ -34,9 +34,20 @@ export function GiltLobby3D() {
     let disposed = false;
     let raf = 0;
     let resize: ResizeObserver | undefined;
-    let renderer: import("three").WebGLRenderer | undefined;
-    let stage: import("three").Scene | undefined;
-    const textureBag: import("three").Texture[] = [];
+    // The existing project imports Three.js at runtime without @types/three.
+    // Use a narrow capability shape instead of unavailable Three namespace types.
+    let renderer: {
+      setPixelRatio: (ratio: number) => void;
+      setClearColor: (color: number) => void;
+      setSize: (width: number, height: number, updateStyle?: boolean) => void;
+      outputColorSpace: unknown;
+      toneMapping: unknown;
+      toneMappingExposure: number;
+      render: (scene: unknown, camera: unknown) => void;
+      dispose: () => void;
+    } | undefined;
+    let stage: { traverse: (visitor: (node: unknown) => void) => void } | undefined;
+    const textureBag: Array<{ dispose: () => void }> = [];
     let yaw = 0;
     let cx = 0;
     let cz = 8;
@@ -276,13 +287,15 @@ export function GiltLobby3D() {
       element.removeEventListener("pointerup", pointerUp);
       element.removeEventListener("pointercancel", pointerUp);
       input.clear();
-      stage?.traverse((node) => {
-        if (node instanceof Object && "isMesh" in node) {
-          const mesh = node as import("three").Mesh;
-          mesh.geometry.dispose();
-          const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
-          for (const material of materials) material.dispose();
-        }
+      stage?.traverse((node: unknown) => {
+        if (typeof node !== "object" || node === null || !("isMesh" in node)) return;
+        const mesh = node as {
+          geometry: { dispose: () => void };
+          material: { dispose: () => void } | Array<{ dispose: () => void }>;
+        };
+        mesh.geometry.dispose();
+        const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+        for (const material of materials) material.dispose();
       });
       for (const t of textureBag) t.dispose();
       renderer?.dispose();
