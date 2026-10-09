@@ -51,6 +51,9 @@ try {
     await page.getByRole("button", { name: "Enter 3D lobby" }).click();
     const room = page.getByRole("dialog", { name: "Gilt House 3D promenade" });
     await room.waitFor({ state: "visible", timeout: 15000 });
+    // Interaction does not teleport visitors from the spawn point.
+    await page.keyboard.press("f");
+    await room.waitFor({ state: "visible" });
     await room.getByRole("button", { name: /THE FLOOR/ }).waitFor({ state: "visible" });
     await room.getByRole("button", { name: /TRAINING LAB/ }).waitFor({ state: "visible" });
     await room.getByRole("button", { name: "Back to 16-bit lobby" }).click();
