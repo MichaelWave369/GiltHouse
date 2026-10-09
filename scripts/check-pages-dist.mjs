@@ -42,7 +42,7 @@ for (const selector of ["flex", "relative", "absolute", "inset-0", "min-h-0", "h
   const matcher = new RegExp(`\\.${selector}\\s*\\{`);
   assert.match(css, matcher, `Tailwind utility .${selector} is missing from Pages CSS: game layout will collapse.`);
 }
-assert.match(css, /\\.world-root\\s*\\{/, "Gilt House world viewport styles are missing.");
+assert.match(css, /\.world-root\s*\{/, "Gilt House world viewport styles are missing.");
 assert.ok(css.length > 10000, "The static CSS is suspiciously small; source scanning may have failed.");
 
 assert.ok(all.some((name) => name.endsWith(".js")), "No generated app JavaScript.");
