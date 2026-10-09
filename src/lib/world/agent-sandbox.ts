@@ -109,21 +109,23 @@ export function replayLocalVisitor(
         : "invalid";
 
     if (decision.allowed) {
-      if (!exactKeys(raw as Record<string, unknown>, decision.action)) {
+      // Capture the narrowed action; narrowing does not carry into callbacks.
+      const action = decision.action;
+      if (!exactKeys(raw as Record<string, unknown>, action)) {
         allowed = false;
         reason = "Only the exact allowlisted action fields are permitted.";
-      } else if (decision.action.type === "move") {
+      } else if (action.type === "move") {
         // Use existing player collision only on a temporary, isolated state.
-        x = movePlayer({ ...world, x }, decision.action.dir, LOCAL_STEP_SECONDS).x;
+        x = movePlayer({ ...world, x }, action.dir, LOCAL_STEP_SECONDS).x;
       } else {
-        const actor = NPCS.find((npc) => npc.id === decision.action.npcId);
-        const actorX = npcWorldX(decision.action.npcId, world.worldTime);
+        const actor = NPCS.find((npc) => npc.id === action.npcId);
+        const actorX = npcWorldX(action.npcId, world.worldTime);
         if (!actor || actor.scene !== world.scene || actorX == null ||
             Math.abs(actorX - x) > TALK_R) {
           allowed = false;
           reason = "This character is not within talk range in the current scene.";
         } else {
-          reason = decision.action.type === "talk"
+          reason = action.type === "talk"
             ? "Rehearsed contact only. Dialogue and quests were NOT executed."
             : "Rehearsed emote only. The live NPC did NOT change.";
         }
