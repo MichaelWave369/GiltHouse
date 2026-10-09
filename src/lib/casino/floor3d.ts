@@ -83,3 +83,83 @@ export function normalizeFloor3DPose(pose: Floor3DPose | null | undefined): Floo
       : 0,
   };
 }
+
+/**
+ * R13: walkable floor physics. Each decorative table is a real 3.0m x
+ * 2.15m solid platform. The extra margin is the visitor's approximate
+ * body radius, so the camera cannot clip its felt surface or brass rails.
+ * AABB collision is deliberately simple, deterministic and browser-local.
+ */
+export const FLOOR3D_TABLE_CLEARANCE_X = 1.88;
+export const FLOOR3D_TABLE_CLEARANCE_Z = 1.46;
+export const FLOOR3D_MAX_FRAME_MOVE = 0.4;
+const FLOOR3D_SWEEP_STEP = 0.08;
+const COLLISION_EPS = 0.02;
+
+export function collidesFloor3DTable(x: number, z: number): boolean {
+  if (!Number.isFinite(x) || !Number.isFinite(z)) return true;
+  return FLOOR3D_STATIONS.some((table) =>
+    Math.abs(x - table.x) < FLOOR3D_TABLE_CLEARANCE_X &&
+    Math.abs(z - table.z) < FLOOR3D_TABLE_CLEARANCE_Z);
+}
+
+/**
+ * Per-frame swept movement with wall clamping and axis-separated sliding.
+ * Even if a caller requests a giant delta, bounded substeps never teleport
+ * across a table. Diagonal normalization occurs at the input layer.
+ */
+export function advanceFloor3DCamera(
+  x: number, z: number, deltaX: number, deltaZ: number,
+): { x: number; z: number } {
+  const start = clampFloor3DCamera(x, z);
+  if (!Number.isFinite(deltaX) || !Number.isFinite(deltaZ)) return start;
+  if (collidesFloor3DTable(start.x, start.z)) return start;
+
+  const distance = Math.hypot(deltaX, deltaZ);
+  if (distance === 0) return start;
+  const allowed = Math.min(distance, FLOOR3D_MAX_FRAME_MOVE);
+  const steps = Math.ceil(allowed / FLOOR3D_SWEEP_STEP);
+  const stepX = deltaX / distance * allowed / steps;
+  const stepZ = deltaZ / distance * allowed / steps;
+
+  let cx = start.x;
+  let cz = start.z;
+  for (let i = 0; i < steps; i++) {
+    const targetX = clampFloor3DCamera(cx + stepX, cz).x;
+    if (!collidesFloor3DTable(targetX, cz)) cx = targetX;
+
+    const targetZ = clampFloor3DCamera(cx, cz + stepZ).z;
+    if (!collidesFloor3DTable(cx, targetZ)) cz = targetZ;
+  }
+  return { x: cx, z: cz };
+}
+
+/**
+ * R12 previously allowed returning from anywhere inside a decorative
+ * tabletop. Preserve normal poses exactly; sanitize any legacy/interior
+ * pose to the nearest clear aisle edge before starting the 3D renderer.
+ */
+export function safeFloor3DReturnPose(pose: Floor3DPose | null): Floor3DPose {
+  const restored = normalizeFloor3DPose(pose);
+  if (!collidesFloor3DTable(restored.x, restored.z)) return restored;
+
+  const candidates: { x: number; z: number }[] = [];
+  for (const table of FLOOR3D_STATIONS) {
+    if (Math.abs(restored.x - table.x) >= FLOOR3D_TABLE_CLEARANCE_X ||
+        Math.abs(restored.z - table.z) >= FLOOR3D_TABLE_CLEARANCE_Z) continue;
+    candidates.push(
+      { x: table.x - FLOOR3D_TABLE_CLEARANCE_X - COLLISION_EPS, z: restored.z },
+      { x: table.x + FLOOR3D_TABLE_CLEARANCE_X + COLLISION_EPS, z: restored.z },
+      { x: restored.x, z: table.z - FLOOR3D_TABLE_CLEARANCE_Z - COLLISION_EPS },
+      { x: restored.x, z: table.z + FLOOR3D_TABLE_CLEARANCE_Z + COLLISION_EPS },
+    );
+  }
+  candidates.sort((a, b) =>
+    (a.x - restored.x) ** 2 + (a.z - restored.z) ** 2 -
+    ((b.x - restored.x) ** 2 + (b.z - restored.z) ** 2));
+  for (const candidate of candidates) {
+    const bounded = clampFloor3DCamera(candidate.x, candidate.z);
+    if (!collidesFloor3DTable(bounded.x, bounded.z)) return { ...bounded, yaw: restored.yaw };
+  }
+  return { ...FLOOR3D_START_POSE, yaw: restored.yaw };
+}
