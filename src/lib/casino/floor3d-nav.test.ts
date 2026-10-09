@@ -75,7 +75,9 @@ test("R14 relative directions reflect camera heading without mutating it", () =>
   assert.ok(route);
   assert.match(floor3DHeading(pose, route), /Turn|Continue|ahead/);
   assert.equal(floor3DHeading(pose, null), "Choose a table for walking directions.");
-  const arrived = { ...floor3DTarget("blackjack"), yaw: 0 };
+  const table = floor3DTarget("blackjack");
+  assert.ok(table);
+  const arrived = { ...table, yaw: 0 };
   assert.match(floor3DHeading(arrived, findFloor3DRoute(arrived, "blackjack")), /at the table/i);
   assert.deepEqual(pose, original);
 });
