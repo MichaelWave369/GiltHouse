@@ -52,3 +52,8 @@ A later agent can live here as an inhabitant only by sending those same local ac
 ## R4 Backstage Agent Desk
 
 The optional Menu → Agent Desk is an in-memory, deterministic *rehearsal*, not an agent execution path. Its 24-action capped script uses a snapshot of the current scene, the existing collision rules, and `reviewAgentAction`. Talk and emotes require a nearby in-scene character but never execute dialogue or quests. The actual world and casino stores are never written. No remote model, API, telemetry, or user account is connected. See `docs/NEON-BLOCK-AGENT-DESK-R4.md`.
+
+
+## R5 visual playback of rehearsed visitors
+
+The Backstage Agent Desk now reuses `renderFrame` to show an isolated copied scene at a hypothetical visitor x-coordinate. It does **not** inject characters into the actual world or alter saved state. The local scripted patrol is deterministic and limited by `MAX_LOCAL_ACTIONS`. Manual stepping remains available for reduced-motion settings. See `docs/NEON-BLOCK-VISITOR-PLAYBACK-R5.md`. This is *not* live PhiBot execution or verified agent training.
