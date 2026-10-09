@@ -31,3 +31,12 @@ The opening walk is **The Midnight Signal**: count three stuttering marquees, fo
 ## Limits
 
 Browser storage is not secure and not a wallet. The 2D district is the game. The WebXR arena is still the experimental casino view; a headset was not part of this build. Remote agents stay off. See `docs/NEON-BLOCK-HANDOFF.md`.
+
+## GitHub Pages static edition
+
+The separate **Gilt House Live** build reuses the real React/Canvas Neon Block and client-side casino rooms without changing the hosted TanStack Start application. The server-dependent live sportsbook is unavailable on GitHub Pages; it still works in the original hosted edition. Local saves are independent per origin. The static release URL, **once Pages is enabled and deployed**, is expected to be [michaelwave369.github.io/GiltHouse](https://michaelwave369.github.io/GiltHouse/). See [the R7 deployment guide](docs/GILT-HOUSE-LIVE-PAGES-R7.md).
+
+```bash
+npm run build:pages
+npm run check:pages
+```
