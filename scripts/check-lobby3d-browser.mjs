@@ -34,17 +34,18 @@ try {
   const errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
   try {
-    await page.goto(url, { waitUntil: "domcontentloaded" });
-    // Controlled local browser fixture only. No real customer/player data.
-    await page.evaluate(() => {
+    // Seed local-only fixture before ANY application hydration/effects run.
+    // Seeding after the first navigation could race with its autosave loop.
+    await page.addInitScript(() => {
       localStorage.setItem("gilt-house-world-v1", JSON.stringify({
         version: 1, scene: "gilt-lobby", x: 64,
         flags: { created: true, intro: true },
         prefs: { music: 0, sfx: 0, mute: true, reduced: true },
       }));
     });
-    await page.reload({ waitUntil: "domcontentloaded" });
-    await page.getByRole("button", { name: "Continue" }).click();
+    await page.goto(url, { waitUntil: "domcontentloaded" });
+    await page.getByRole("dialog", { name: "Gilt House title" }).waitFor({ state: "visible", timeout: 15000 });
+    await page.getByRole("button", { name: "Continue", exact: true }).click();
     await page.getByRole("button", { name: "Enter 3D lobby" }).waitFor({ state: "visible" });
     const before = await page.evaluate(() => localStorage.getItem("gilt-house-v1"));
     await page.getByRole("button", { name: "Enter 3D lobby" }).click();
