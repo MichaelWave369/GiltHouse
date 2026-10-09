@@ -2,10 +2,11 @@ import { useEffect, useRef, useState } from "react";
 import {
   canOpenFloor3DTable,
   clampFloor3DCamera,
-  FLOOR3D_SPAWN,
   FLOOR3D_STATIONS,
   nearestFloor3DTable,
   validFloor3DGame,
+  normalizeFloor3DPose,
+  type Floor3DPose,
   type FloorGame,
 } from "@/lib/casino/floor3d";
 
@@ -23,16 +24,20 @@ const DIRECTION_BUTTONS: readonly { id: Motion; name: string }[] = [
 export function FloorWalk3D({
   onClose,
   onChoose,
+  returnPose,
 }: {
   onClose: () => void;
-  onChoose: (game: FloorGame) => void;
+  onChoose: (game: FloorGame, pose: Floor3DPose) => void;
+  returnPose: Floor3DPose | null;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const roomRef = useRef<HTMLDivElement>(null);
+  const latestPose = useRef<Floor3DPose>(normalizeFloor3DPose(returnPose));
   const held = useRef(new Set<Motion>());
   const [phase, setPhase] = useState<"loading" | "ready" | "fallback">("loading");
   const [nearGame, setNearGame] = useState<FloorGame | null>(null);
   const [notice, setNotice] = useState("");
+  const [restored] = useState(() => returnPose !== null);
   const [reduced] = useState(() => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
 
   useEffect(() => { roomRef.current?.focus(); }, []);
@@ -53,9 +58,15 @@ export function FloorWalk3D({
     } | undefined;
     const textures: Array<{ dispose: () => void }> = [];
     const input = held.current;
-    let x: number = FLOOR3D_SPAWN.x;
-    let z: number = FLOOR3D_SPAWN.z;
-    let yaw = 0;
+    // Capture the incoming handoff only on mount. Never synchronize movement
+    // into localStorage or the casino Zustand economy.
+    const initial = normalizeFloor3DPose(returnPose);
+    let x: number = initial.x;
+    let z: number = initial.z;
+    let yaw: number = initial.yaw;
+    const snapshot = (): Floor3DPose => normalizeFloor3DPose({ x, z, yaw });
+    latestPose.current = snapshot();
+    const enter = (game: FloorGame) => onChoose(game, snapshot());
     let oldFrame = 0;
     let currentGame: FloorGame | null = null;
     let start: { x: number; y: number } | null = null;
@@ -78,7 +89,7 @@ export function FloorWalk3D({
         const table = nearestFloor3DTable(x, z);
         if (table && canOpenFloor3DTable(table.game, x, z)) {
           event.preventDefault();
-          onChoose(table.game);
+          enter(table.game);
         }
         return;
       }
@@ -287,7 +298,7 @@ export function FloorWalk3D({
             setNotice("Walk closer to that table, then tap or press F.");
             return;
           }
-          onChoose(game);
+          enter(game);
         };
 
         function animate(stamp: number) {
@@ -306,6 +317,7 @@ export function FloorWalk3D({
             x = projected.x;
             z = projected.z;
           }
+          latestPose.current = snapshot();
           camera.position.set(x, 1.65, z);
           camera.lookAt(x + Math.sin(yaw), 1.75, z - Math.cos(yaw));
           const target = nearestFloor3DTable(x, z)?.game ?? null;
@@ -355,7 +367,9 @@ export function FloorWalk3D({
       for (const texture of textures) texture.dispose();
       renderer?.dispose();
     };
-  }, [onChoose, onClose, reduced]);
+    // Intentionally capture the initial resume pose on mount only; callers
+    // do not update it while a 3D walkthrough is active.
+  }, [onChoose, onClose, reduced, returnPose]);
 
   const near = FLOOR3D_STATIONS.find((s) => s.game === nearGame);
   return (
@@ -366,6 +380,7 @@ export function FloorWalk3D({
         <div>
           <p className="text-[0.65rem] uppercase tracking-widest text-gold">Gilt House · Optional 3D</p>
           <h2 className="font-display text-xl italic">The Gaming Floor</h2>
+          {restored ? <p role="status" className="text-xs text-gold">Welcome back. Your 3D position and view were restored.</p> : null}
         </div>
         <button type="button" onClick={onClose}
           className="press min-h-11 rounded-full border border-gold px-4 text-sm text-gold">
@@ -380,7 +395,7 @@ export function FloorWalk3D({
           <span className="mt-1 block text-cream-dim">Drag to look around. Tap tables when close, or use the directory below.</span>
         </p>
         {phase === "ready" && near ? (
-          <button type="button" onClick={() => onChoose(near.game)}
+          <button type="button" onClick={() => onChoose(near.game, latestPose.current)}
             className="press absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full border border-gold bg-ink/95 px-4 py-3 text-sm font-semibold text-gold">
             F · Enter {near.name}
           </button>
@@ -395,7 +410,7 @@ export function FloorWalk3D({
       <section aria-label="Casino games" className="shrink-0 border-t border-line bg-ink px-3 py-2">
         <div role="group" aria-label="Casino table shortcuts" className="mx-auto grid max-w-5xl grid-cols-4 gap-1 sm:grid-cols-8">
           {FLOOR3D_STATIONS.map((station) => (
-            <button type="button" key={station.id} onClick={() => onChoose(station.game)}
+            <button type="button" key={station.id} onClick={() => onChoose(station.game, latestPose.current)}
               className="press min-h-11 rounded-lg border border-line bg-panel p-1 text-center text-[0.65rem] font-semibold text-gold hover:border-gold">
               {station.name}
             </button>

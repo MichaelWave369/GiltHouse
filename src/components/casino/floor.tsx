@@ -1,6 +1,6 @@
 import { lazy, Suspense, useCallback, useState } from "react";
 import { BookOpen, Bot, Cherry, Club, Diamond, Dice5, Dices, Gem, Grid3x3, Radio, Spade } from "lucide-react";
-import type { FloorGame } from "@/lib/casino/floor3d";
+import type { FloorGame, Floor3DPose } from "@/lib/casino/floor3d";
 
 const FloorWalk3D = lazy(() => import("@/components/casino/floor-walk3d").then((module) => ({ default: module.FloorWalk3D })));
 import { chips, OPENING_BANK, useCasino, type Ledger } from "@/lib/casino/store";
@@ -110,16 +110,21 @@ function gameLabel(game: Ledger["game"]) {
   return "House";
 }
 
-export function Floor() {
+export function Floor({ return3DPose, onLeave3D, onChoose3D }: {
+  return3DPose: Floor3DPose | null;
+  onLeave3D: () => void;
+  onChoose3D: (game: FloorGame, pose: Floor3DPose) => void;
+}) {
   const setView = useCasino((s) => s.setView);
   const ledger = useCasino((s) => s.ledger);
   const resetPurse = useCasino((s) => s.resetPurse);
-  const [show3D, setShow3D] = useState(false);
-  const close3D = useCallback(() => setShow3D(false), []);
-  const choose3D = useCallback((game: FloorGame) => {
+  // When returning from a real casino game opened inside the 3D showroom,
+  // start directly at the previous location. A direct 2D entry stays in 2D.
+  const [show3D, setShow3D] = useState(() => return3DPose !== null);
+  const close3D = useCallback(() => {
     setShow3D(false);
-    setView(game);
-  }, [setView]);
+    onLeave3D();
+  }, [onLeave3D]);
   const net = ledger.reduce((sum, row) => sum + row.delta, 0);
 
   return (
@@ -201,7 +206,7 @@ export function Floor() {
       </footer>
       {show3D ? (
         <Suspense fallback={<div role="status" className="fixed inset-0 z-50 flex items-center justify-center bg-ink text-gold">Loading the 3D gaming floor…</div>}>
-          <FloorWalk3D onClose={close3D} onChoose={choose3D} />
+          <FloorWalk3D onClose={close3D} onChoose={onChoose3D} returnPose={return3DPose} />
         </Suspense>
       ) : null}
     </Frame>

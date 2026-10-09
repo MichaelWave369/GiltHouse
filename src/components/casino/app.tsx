@@ -1,4 +1,5 @@
-import { useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { normalizeFloor3DPose, type Floor3DPose, type FloorGame } from "@/lib/casino/floor3d";
 import { unlockAudio, setLounge } from "@/lib/casino/audio";
 import { useCasino } from "@/lib/casino/store";
 import { Agents } from "@/components/casino/agents";
@@ -25,6 +26,13 @@ export function CasinoApp() {
   const sound = useCasino((s) => s.sound);
   const agentStatus = useCasino((s) => s.agent?.status);
   const advanceAgent = useCasino((s) => s.advanceAgent);
+  // Ephemeral UI navigation only. Never included in Zustand casino/save state.
+  const [return3DPose, setReturn3DPose] = useState<Floor3DPose | null>(null);
+  const clearReturn3D = useCallback(() => setReturn3DPose(null), []);
+  const enterTableFrom3D = useCallback((game: FloorGame, pose: Floor3DPose) => {
+    setReturn3DPose(normalizeFloor3DPose(pose));
+    useCasino.getState().setView(game);
+  }, []);
 
   useEffect(() => {
     boot();
@@ -79,7 +87,7 @@ export function CasinoApp() {
         ) : view === "agents" ? (
           <Agents />
         ) : (
-          <Floor />
+          <Floor return3DPose={return3DPose} onLeave3D={clearReturn3D} onChoose3D={enterTableFrom3D} />
         )}
       </div>
     </>
