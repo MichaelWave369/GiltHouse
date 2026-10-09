@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import {
   canOpenFloor3DTable,
-  clampFloor3DCamera,
+  advanceFloor3DCamera,
+  collidesFloor3DTable,
+  safeFloor3DReturnPose,
   FLOOR3D_STATIONS,
   nearestFloor3DTable,
   validFloor3DGame,
@@ -32,11 +34,12 @@ export function FloorWalk3D({
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const roomRef = useRef<HTMLDivElement>(null);
-  const latestPose = useRef<Floor3DPose>(normalizeFloor3DPose(returnPose));
+  const latestPose = useRef<Floor3DPose>(safeFloor3DReturnPose(returnPose));
   const held = useRef(new Set<Motion>());
   const [phase, setPhase] = useState<"loading" | "ready" | "fallback">("loading");
   const [nearGame, setNearGame] = useState<FloorGame | null>(null);
   const [notice, setNotice] = useState("");
+  const [tableBlocked, setTableBlocked] = useState(false);
   const [restored] = useState(() => returnPose !== null);
   const [reduced] = useState(() => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
 
@@ -60,7 +63,7 @@ export function FloorWalk3D({
     const input = held.current;
     // Capture the incoming handoff only on mount. Never synchronize movement
     // into localStorage or the casino Zustand economy.
-    const initial = normalizeFloor3DPose(returnPose);
+    const initial = safeFloor3DReturnPose(returnPose);
     let x: number = initial.x;
     let z: number = initial.z;
     let yaw: number = initial.yaw;
@@ -69,6 +72,7 @@ export function FloorWalk3D({
     const enter = (game: FloorGame) => onChoose(game, snapshot());
     let oldFrame = 0;
     let currentGame: FloorGame | null = null;
+    let wasBlocked = false;
     let start: { x: number; y: number } | null = null;
     let pointerX: number | null = null;
     let dragged = false;
@@ -309,13 +313,23 @@ export function FloorWalk3D({
           yaw = Math.max(-1.4, Math.min(1.4, yaw + turning * dt * 1.3));
           const forward = Number(input.has("forward")) - Number(input.has("back"));
           const strafe = Number(input.has("right")) - Number(input.has("left"));
+          let blocked = false;
           if (forward || strafe) {
-            const projected = clampFloor3DCamera(
-              x + (Math.sin(yaw) * forward + Math.cos(yaw) * strafe) * dt * 3.3,
-              z + (-Math.cos(yaw) * forward + Math.sin(yaw) * strafe) * dt * 3.3,
-            );
+            const wishX = Math.sin(yaw) * forward + Math.cos(yaw) * strafe;
+            const wishZ = -Math.cos(yaw) * forward + Math.sin(yaw) * strafe;
+            // Diagonals have the same walking speed as straight movement.
+            const length = Math.max(1, Math.hypot(wishX, wishZ));
+            const dx = wishX / length * dt * 3.3;
+            const dz = wishZ / length * dt * 3.3;
+            const projected = advanceFloor3DCamera(x, z, dx, dz);
+            blocked = collidesFloor3DTable(x + dx, z + dz) &&
+              (Math.abs(projected.x - x - dx) + Math.abs(projected.z - z - dz) > 0.005);
             x = projected.x;
             z = projected.z;
+          }
+          if (blocked !== wasBlocked) {
+            wasBlocked = blocked;
+            setTableBlocked(blocked);
           }
           latestPose.current = snapshot();
           camera.position.set(x, 1.65, z);
@@ -399,6 +413,11 @@ export function FloorWalk3D({
             className="press absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full border border-gold bg-ink/95 px-4 py-3 text-sm font-semibold text-gold">
             F · Enter {near.name}
           </button>
+        ) : null}
+        {tableBlocked && phase === "ready" ? (
+          <p role="status" className="pointer-events-none absolute right-3 top-3 max-w-52 rounded-lg border border-gold/40 bg-ink/90 p-3 text-xs text-gold">
+            Solid table ahead. Walk around the rail, or press F when nearby.
+          </p>
         ) : null}
         {notice && phase === "ready" ? <p role="status" className="pointer-events-none absolute bottom-16 left-1/2 -translate-x-1/2 rounded-lg bg-ink/90 px-3 py-2 text-xs text-gold">{notice}</p> : null}
         {phase !== "ready" ? (
