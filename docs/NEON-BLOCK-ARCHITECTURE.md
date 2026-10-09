@@ -21,7 +21,7 @@ World rules are plain data and functions. The canvas is a view.
 | `src/lib/world/logic.ts` | Movement, collision, interact, dialogue, shop, arcade payouts, objectives |
 | `src/lib/world/save.ts` | Versioned parse, migrate v0 → v1, corrupt fallback |
 | `src/lib/world/store.ts` | Zustand runtime: panels, talk, arcade, casino door |
-| `src/lib/world/draw.ts` | 320×180 pixel frame, nearest-neighbor scaled in the game loop |
+| `src/lib/world/draw.ts` | 320×180 pixel frame, nearest-neighbor scaled in the game loop. Facades, interiors, and people are drawn in code. Marquee names use a 3×5 pixel alphabet.
 | `src/lib/world/agent.ts` | Disabled remote-agent contract |
 | `src/components/world/engine.tsx` | rAF loop, keyboard, touch, audio, `__controlsTest` |
 | `src/components/world/overlay.tsx` | HUD, dialogue, shops, journal, map, creator |
@@ -31,7 +31,7 @@ Stable ids (`scene`, NPC id, item id, quest id, portal id) are the contract a fu
 
 ## Loop
 
-`requestAnimationFrame` computes one capped delta. A/D move only while no panel, dialogue, or cabinet is open. Intro text does not freeze the sidewalk. Up / W / E / Act share one `interact()` path. The camera follows the player inside the logical frame. The visible canvas is an integer scale of that frame with smoothing off.
+`requestAnimationFrame` computes one capped delta. A/D move only while no blocking panel, dialogue, or cabinet is open. The title, creator, and chapter card do block walking. Intro text does not. **E** prefers a person or a hotspot. **W** prefers a door, and falls back to E only when no door is in range. Blur, a hidden tab, and pointer cancel release held movement. The camera follows the player inside the logical frame. The visible canvas is an integer scale of that frame with smoothing off.
 
 ## Economy wall
 
@@ -43,4 +43,6 @@ Street music and street cues use their own gain nodes in `src/lib/casino/audio.t
 
 ## Future agents
 
-`reviewAgentAction` rejects every source except `local-script`, and rejects any action that is not talk, move, or emote. There is no wager action, no chip mutation, and no remote call budget above zero. NPC dialogue remains deterministic.
+`reviewAgentAction` accepts only `local-script`. A move must use direction `-1` or `1`. Talk and emote must name an NPC who already exists, and an emote must be `wave` or `listen`. Privileged fields (`wager`, `chips`, `bank`, `spendApi`, `selfGrant`, and the rest of that list) are rejected even on an otherwise legal action. Remote sources, including any future PhiBot, stay off. The remote-call budget is zero. NPC dialogue remains deterministic. In-game success is not a training receipt.
+
+A later agent can live here as an inhabitant only by sending those same local actions through the review function, with a person raising the budget first. It must not grant itself permissions, spend API money, place real-money wagers, touch commercial entitlements, or rewrite the chip purse. Observations stay on scene id, nearby actor ids, the objective line, and visible street tokens. They never include the chip bank.

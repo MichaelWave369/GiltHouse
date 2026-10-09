@@ -7,7 +7,6 @@ import {
   WORLD_VERSION,
   type Appearance,
   type Prefs,
-  type SceneId,
   type WorldState,
 } from "./types.ts";
 

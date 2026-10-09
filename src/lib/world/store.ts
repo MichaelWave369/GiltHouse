@@ -12,7 +12,7 @@ import {
   currentObjective,
   equipItem,
   grantArcade,
-  interact,
+  interact as interactWorld,
   journal,
   lookAt,
   maybeEncounter,
@@ -24,10 +24,11 @@ import {
   tick,
   useItem,
   withStyle,
+  type Aim,
 } from "./logic.ts";
 import { encounterById } from "./content.ts";
 
-export type Panel = "none" | "create" | "intro" | "pause" | "inventory" | "journal" | "map" | "help" | "shop";
+export type Panel = "none" | "title" | "create" | "intro" | "chapter" | "pause" | "inventory" | "journal" | "map" | "help" | "shop";
 
 type Talk = { kind: TalkKind; id: string; nodeId: string };
 
@@ -45,11 +46,14 @@ type WorldStore = {
   setAppearance: (patch: Partial<Appearance>) => void;
   confirmLook: () => void;
   dismissIntro: () => void;
+  continueNight: () => void;
+  beginNewGame: () => void;
+  dismissChapter: () => void;
   openPanel: (panel: Panel) => void;
   closePanel: () => void;
   move: (dir: -1 | 0 | 1, dt: number) => void;
   step: (dt: number, walking: boolean) => void;
-  interact: () => void;
+  interact: (aim?: Aim) => void;
   choose: (choiceId: string) => void;
   closeTalk: () => void;
   buy: (itemId: string) => void;
@@ -78,6 +82,13 @@ function casinoView(door: CasinoDoor): View {
   return "agents";
 }
 
+function resumeAfterTitle(world: ReturnType<typeof defaultWorld>): Panel {
+  if (world.flags.created !== true) return "create";
+  if (world.flags["chapter:one"] === true && world.flags["chapter:seen"] !== true) return "chapter";
+  if (world.flags.intro !== true) return "intro";
+  return "none";
+}
+
 export const useWorld = create<WorldStore>((set, get) => ({
   world: defaultWorld(),
   mode: "street",
@@ -90,14 +101,11 @@ export const useWorld = create<WorldStore>((set, get) => ({
   boot: () => {
     if (get().booted || typeof window === "undefined") return;
     const loaded = loadWorld(memory());
-    const created = loaded.state.flags.created === true;
-    const intro = loaded.state.flags.intro === true;
-    const panel: Panel = created ? (intro ? "none" : "intro") : "create";
     set({
       world: loaded.state,
       booted: true,
       recovered: loaded.recovered,
-      panel,
+      panel: "title",
       toast: loaded.recovered ? "The street journal was unreadable, so this is a fresh walk. Your chips were left alone." : null,
     });
   },
@@ -126,6 +134,26 @@ export const useWorld = create<WorldStore>((set, get) => ({
     set({ world, panel: "none" });
     get().save();
   },
+  continueNight: () => {
+    set({ panel: resumeAfterTitle(get().world) });
+  },
+  beginNewGame: () => {
+    if (typeof window !== "undefined") clearWorld(memory());
+    set({
+      world: defaultWorld(),
+      mode: "street",
+      panel: "create",
+      talk: null,
+      arcade: null,
+      recovered: false,
+      toast: "A new walk. The casino purse was not touched.",
+    });
+  },
+  dismissChapter: () => {
+    const world = { ...get().world, flags: { ...get().world.flags, "chapter:seen": true } };
+    set({ world, panel: "none", talk: null });
+    get().save();
+  },
   openPanel: (panel) => set({ panel, talk: panel === "none" ? get().talk : null }),
   closePanel: () => set({ panel: "none" }),
   move: (dir, dt) => {
@@ -137,10 +165,11 @@ export const useWorld = create<WorldStore>((set, get) => ({
     if (get().mode !== "street") return;
     set({ world: tick(get().world, dt, walking && !get().talk && get().panel === "none") });
   },
-  interact: () => {
+  interact: (aim: Aim = "act") => {
     if (get().talk || get().arcade || get().mode !== "street") return;
     if (get().panel !== "none" && get().panel !== "intro") return;
-    const result = interact(get().world);
+    let result = interactWorld(get().world, aim);
+    if (aim === "door" && result.action.type === "none") result = interactWorld(get().world, "act");
     const sceneChanged = result.state.scene !== get().world.scene;
     set({ world: result.state });
     const action = result.action;
@@ -158,6 +187,7 @@ export const useWorld = create<WorldStore>((set, get) => ({
     const result = pickChoice(get().world, talk.kind, talk.id, talk.nodeId, choiceId);
     if (result.missing) return;
     set({ world: result.state });
+    const showChapter = result.state.flags["chapter:one"] === true && result.state.flags["chapter:seen"] !== true;
     if (result.shop) {
       set({ talk: null, panel: "shop" });
     } else if (result.casino) {
@@ -165,6 +195,8 @@ export const useWorld = create<WorldStore>((set, get) => ({
       get().enterCasino(result.casino);
     } else if (result.next) {
       set({ talk: { ...talk, nodeId: result.next } });
+    } else if (showChapter) {
+      set({ talk: null, panel: "chapter" });
     } else {
       set({ talk: null });
     }
@@ -209,8 +241,9 @@ export const useWorld = create<WorldStore>((set, get) => ({
   finishArcade: (score, total) => {
     const game = get().arcade;
     if (!game) return;
+    set({ arcade: null });
     const result = grantArcade(get().world, game, score, total);
-    set({ world: result.state, arcade: null, toast: result.message });
+    set({ world: result.state, toast: result.message });
     get().save();
   },
   closeArcade: () => set({ arcade: null }),

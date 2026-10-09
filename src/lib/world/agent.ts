@@ -5,6 +5,8 @@
  * touch casino chip authority, or grant its own permissions.
  */
 
+import { NPCS } from "./content.ts";
+
 export type AgentIdentity = {
   id: string;
   displayName: string;
@@ -56,19 +58,70 @@ export const AGENT_PERMISSION: AgentPermission = {
   selfGrant: false,
 };
 
-const LOCAL_TYPES = new Set(["talk", "move", "emote"]);
+const NPC_IDS = new Set(NPCS.map((npc) => npc.id));
+const EMOTES = new Set(["wave", "listen"]);
+const BANNED = [
+  "wager",
+  "chips",
+  "bank",
+  "spendApi",
+  "selfGrant",
+  "remote",
+  "permission",
+  "entitlement",
+  "chipBank",
+  "apiKey",
+  "customer",
+] as const;
 
-export function reviewAgentAction(action: { type?: string }, source: string): AgentDecision {
+function bannedField(value: object): string | null {
+  for (const key of BANNED) {
+    if (Object.prototype.hasOwnProperty.call(value, key)) return key;
+  }
+  return null;
+}
+
+export function reviewAgentAction(action: unknown, source: string): AgentDecision {
   if (source !== "local-script") {
     return {
       allowed: false,
       reason: "Remote agents are disabled. No API spend, no wagers, no chip authority, no self-granted permissions.",
     };
   }
-  if (!action || typeof action.type !== "string" || !LOCAL_TYPES.has(action.type)) {
-    return { allowed: false, reason: "Only local talk, move, and emote actions are in the contract." };
+  if (!action || typeof action !== "object" || Array.isArray(action)) {
+    return { allowed: false, reason: "An action must be a local object, not a payload from elsewhere." };
   }
-  return { allowed: true, action: action as AgentAction, reason: "Local script accepted. It cannot touch chips or paid services." };
+  const row = action as Record<string, unknown>;
+  const banned = bannedField(row);
+  if (banned) {
+    return { allowed: false, reason: `Privileged field "${banned}" is not available to a local script.` };
+  }
+  if (row.type === "move") {
+    if (row.dir !== -1 && row.dir !== 1) {
+      return { allowed: false, reason: "Movement direction must be exactly -1 or 1." };
+    }
+    return { allowed: true, action: { type: "move", dir: row.dir }, reason: "Local move accepted. It cannot touch chips or paid services." };
+  }
+  if (row.type === "talk") {
+    if (typeof row.npcId !== "string" || !NPC_IDS.has(row.npcId)) {
+      return { allowed: false, reason: "Talk needs a real person who already lives on the block." };
+    }
+    return { allowed: true, action: { type: "talk", npcId: row.npcId }, reason: "Local talk accepted. It cannot touch chips or paid services." };
+  }
+  if (row.type === "emote") {
+    if (typeof row.npcId !== "string" || !NPC_IDS.has(row.npcId)) {
+      return { allowed: false, reason: "Emote needs a real person who already lives on the block." };
+    }
+    if (typeof row.emote !== "string" || !EMOTES.has(row.emote)) {
+      return { allowed: false, reason: "Emotes are wave or listen. Nothing else." };
+    }
+    return {
+      allowed: true,
+      action: { type: "emote", npcId: row.npcId, emote: row.emote as "wave" | "listen" },
+      reason: "Local emote accepted. It cannot touch chips or paid services.",
+    };
+  }
+  return { allowed: false, reason: "Only local talk, move, and emote actions are in the contract." };
 }
 
 export function scriptedObservation(sceneId: string, nearby: string[], objective: string | null, tokens: number): AgentObservation {

@@ -309,6 +309,29 @@ export const NPCS: ActorDef[] = [
     }),
   },
   {
+    id: "wick",
+    name: "Wick Candle",
+    title: "Threshold regular",
+    scene: "neon-block",
+    x: doorX("diner"),
+    body: "#f0c27a",
+    hair: "#3a2418",
+    root: "root",
+    nodes: nodes({
+      root: {
+        text: "I'm not the door. The door is the dark rectangle behind me, and it still works. Talk if you want a person. Step through if you want pancakes.",
+        choices: [
+          { id: "why", text: "Why stand in the threshold?", next: "why" },
+          leave("I'll use the door, then."),
+        ],
+      },
+      why: {
+        text: "Because every block needs someone who proves the entrance is not a person. W, or the Door line, gets you into Midnight. E gets me, and I don't serve.",
+        choices: [leave("That's fair.")],
+      },
+    }),
+  },
+  {
     id: "ford",
     name: "Ford Ives",
     title: "Cabbie",
@@ -576,6 +599,12 @@ export const NPCS: ActorDef[] = [
         choices: [
           { id: "menu", text: "What's cooking?", shop: true },
           {
+            id: "usual",
+            text: "The usual.",
+            next: "usual",
+            requireFlag: "tasted:coffee",
+          },
+          {
             id: "tired",
             text: "I'm running on fumes.",
             next: "coffee",
@@ -619,6 +648,10 @@ export const NPCS: ActorDef[] = [
         text: "She slides a cup you did not pay for. 'Use it before it becomes a personality. The rest of the menu costs tokens, not chips. I don't speak chip.'",
         choices: [leave("Thank you.")],
       },
+      usual: {
+        text: "Dottie is already pouring. 'Coffee, then. You drank the last one like it owed you rent. This one still costs tokens if you want it from the menu. I just like that you remembered the order.'",
+        choices: [{ id: "menu", text: "Then I'll buy one.", shop: true }, leave("That's the one.")],
+      },
       errand: {
         text: "Harvey has a record called Griddle Jazz and he is holding it hostage because he thinks I called his trumpet bin 'seasoning.' Ten tokens so you can afford the thing. Bring it home.",
         choices: [{ id: "menu", text: "I'll look at the menu too.", shop: true }, leave("On my way.")],
@@ -644,8 +677,13 @@ export const NPCS: ActorDef[] = [
         choices: [
           { id: "shop", text: "Show me what walks.", shop: true },
           { id: "style", text: "What should I try first?", next: "style" },
+          { id: "noticed", text: "Did the sidewalk notice?", next: "noticed", minStyle: 2 },
           leave(),
         ],
+      },
+      noticed: {
+        text: "Sable tilts their head the way a mirror does when it is being kind. 'The jacket said hello before you did. Vinny at Starlight will pretend he discovered you. Let him. The rope is the only snob on the block, and even it likes a good shoulder.'",
+        choices: [{ id: "shop", text: "Show me the rest of the rack.", shop: true }, leave("I'll go stand somewhere gold.")],
       },
       style: {
         text: "A jacket, then something small near your face. Equip them. If you only buy and leave them in the bag, the sidewalk can't see your effort and Vinny certainly won't.",
@@ -762,9 +800,14 @@ export const NPCS: ActorDef[] = [
             next: "griddle",
             quest: "q-griddle",
           },
+          { id: "played", text: "The block is humming your brass.", next: "played", hasItem: "alley-brass" },
           { id: "radio", text: "What's the radio doing?", next: "radio" },
           leave(),
         ],
+      },
+      played: {
+        text: "Harvey almost smiles, which for him is a weather event. 'Then the street is doing its job. Don't tell the radio. It gets jealous and starts counting again.'",
+        choices: [leave("I'll keep the volume neighborly.")],
       },
       griddle: {
         text: "Of course she does. Tell her the trumpet bin is a curated ecosystem, not seasoning. The record is in the bin, priced like a record, not like a favor.",
@@ -1020,6 +1063,7 @@ export const NPCS: ActorDef[] = [
             effects: [
               { op: "quest", id: "q-signal", status: "complete", step: 3 },
               { op: "flag", key: "signal:known", value: true },
+              { op: "flag", key: "chapter:one", value: true },
               { op: "knowledge", n: 1 },
               { op: "tokens", n: 20 },
               { op: "item", id: "gilt-pin", n: 1 },
@@ -1054,8 +1098,13 @@ export const NPCS: ActorDef[] = [
             ],
           },
           { id: "familiar", text: "Have we met?", next: "familiar" },
+          { id: "again", text: "The pin is still warm.", next: "again", requireFlag: "signal:known" },
           leave("Good night, then."),
         ],
+      },
+      again: {
+        text: "Ivo does not look at the pin. They look at the ceiling. 'It stays warm. I dislike that it is not a metaphor. If you start answering the count out loud, eat something at Dottie's. The roof can wait. It has waited for years.'",
+        choices: [leave("I'll get a booth first.")],
       },
       signal: {
         text: "Ivo's voice drops the lobby voice. 'Mara Gilt was my aunt. She tuned the signs to a count the night shift could share: three, six, nine. Not a spell. A way to say the doors are still open. You heard her. That was the whole mystery. Twenty tokens from the lost-and-found jar, and her pin. It doesn't spend. It just shows.'",
