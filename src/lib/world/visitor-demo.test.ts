@@ -45,7 +45,7 @@ test("same-scene rehearsal works near room walls and without any nearby NPC", ()
   const trace = replayLocalVisitor(room, script, "local-script");
   assert.ok(trace.endX >= 18);
   assert.ok(trace.steps.every((step) => Number.isFinite(step.xAfter)));
-  const noActor = { ...defaultWorld(), scene: "neon-block" as const, x: 1000 };
+  const noActor = { ...defaultWorld(), scene: "neon-block" as const, x: 18 };
   const plan = planLocalPatrol(noActor);
   assert.ok(plan.every((action) => action.type === "move"));
   assert.equal(plan.length, 16);
