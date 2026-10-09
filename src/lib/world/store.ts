@@ -28,7 +28,7 @@ import {
 } from "./logic.ts";
 import { encounterById } from "./content.ts";
 
-export type Panel = "none" | "title" | "create" | "intro" | "chapter" | "pause" | "inventory" | "journal" | "map" | "help" | "shop";
+export type Panel = "none" | "title" | "create" | "intro" | "chapter" | "pause" | "inventory" | "journal" | "map" | "help" | "shop" | "agent-desk";
 
 type Talk = { kind: TalkKind; id: string; nodeId: string };
 

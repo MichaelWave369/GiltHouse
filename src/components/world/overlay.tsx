@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { MemoryGame, PulseGame } from "@/components/world/arcade";
+import { AgentDesk } from "@/components/world/agent-desk";
 import { FACADES, ITEMS, LOCATIONS, actorById, encounterById } from "@/lib/world/content";
 import { drawPortrait } from "@/lib/world/draw";
 import { choiceVisible, currentObjective, dialogueNodes, journal, lookAt, speakerTitle } from "@/lib/world/logic";
@@ -120,6 +121,7 @@ export function WorldOverlay() {
       {panel === "journal" ? <Journal /> : null}
       {panel === "map" ? <DistrictMap /> : null}
       {panel === "help" ? <Help /> : null}
+      {panel === "agent-desk" ? <Sheet title="Backstage Agent Desk"><AgentDesk /></Sheet> : null}
       {panel === "shop" ? <Shop /> : null}
       {talk ? <TalkBox /> : null}
       {arcade ? (
@@ -339,6 +341,7 @@ function Pause() {
         <MenuButton label="Bag" onClick={() => open("inventory")} />
         <MenuButton label="Map" onClick={() => open("map")} />
         <MenuButton label="Help" onClick={() => open("help")} />
+        <MenuButton label="Agent Desk" onClick={() => open("agent-desk")} />
         <MenuButton label="Training Lab" onClick={() => useWorld.getState().enterCasino("training")} />
         <MenuButton label="The Pit" onClick={() => useWorld.getState().enterCasino("workshop")} />
       </div>

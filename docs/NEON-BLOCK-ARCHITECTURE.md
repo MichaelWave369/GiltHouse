@@ -23,6 +23,8 @@ World rules are plain data and functions. The canvas is a view.
 | `src/lib/world/store.ts` | Zustand runtime: panels, talk, arcade, casino door |
 | `src/lib/world/draw.ts` | 320×180 pixel frame, nearest-neighbor scaled in the game loop. Facades, interiors, and people are drawn in code. Marquee names use a 3×5 pixel alphabet.
 | `src/lib/world/agent.ts` | Disabled remote-agent contract |
+| `src/lib/world/agent-sandbox.ts` | Deterministic hypothetical visitor replay, no state effects |
+| `src/components/world/agent-desk.tsx` | Opt-in local-only rehearsal UI under the pause menu |
 | `src/components/world/engine.tsx` | rAF loop, keyboard, touch, audio, `__controlsTest` |
 | `src/components/world/overlay.tsx` | HUD, dialogue, shops, journal, map, creator |
 | `src/components/world/arcade.tsx` | Pulse Line and Marquee Memory |
@@ -46,3 +48,7 @@ Street music and street cues use their own gain nodes in `src/lib/casino/audio.t
 `reviewAgentAction` accepts only `local-script`. A move must use direction `-1` or `1`. Talk and emote must name an NPC who already exists, and an emote must be `wave` or `listen`. Privileged fields (`wager`, `chips`, `bank`, `spendApi`, `selfGrant`, and the rest of that list) are rejected even on an otherwise legal action. Remote sources, including any future PhiBot, stay off. The remote-call budget is zero. NPC dialogue remains deterministic. In-game success is not a training receipt.
 
 A later agent can live here as an inhabitant only by sending those same local actions through the review function, with a person raising the budget first. It must not grant itself permissions, spend API money, place real-money wagers, touch commercial entitlements, or rewrite the chip purse. Observations stay on scene id, nearby actor ids, the objective line, and visible street tokens. They never include the chip bank.
+
+## R4 Backstage Agent Desk
+
+The optional Menu → Agent Desk is an in-memory, deterministic *rehearsal*, not an agent execution path. Its 24-action capped script uses a snapshot of the current scene, the existing collision rules, and `reviewAgentAction`. Talk and emotes require a nearby in-scene character but never execute dialogue or quests. The actual world and casino stores are never written. No remote model, API, telemetry, or user account is connected. See `docs/NEON-BLOCK-AGENT-DESK-R4.md`.
