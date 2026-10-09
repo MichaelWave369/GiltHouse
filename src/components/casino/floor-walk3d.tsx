@@ -339,7 +339,7 @@ export function FloorWalk3D({
           for (let i = 0; i < markers.length; i++) {
             const marker = markers[i];
             arrowTransform.position.set(marker.x, 0.115, marker.z);
-            arrowTransform.rotation.set(0, marker.yaw, 0);
+            arrowTransform.rotation.set(0, -marker.yaw, 0);
             arrowTransform.updateMatrix();
             arrows.setMatrixAt(i, arrowTransform.matrix);
           }
