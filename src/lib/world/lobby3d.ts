@@ -121,3 +121,31 @@ export function advanceLobby3DCamera(
   }
   return { x: cx, z: cz };
 }
+
+/**
+ * R18: ephemeral route provenance, not an account privilege. The only
+ * authorized automatic 3D floor entrance comes from the *already-open*
+ * Gilt House Three.js lobby. The classic 2D floor remains the default.
+ */
+export type Lobby3DTransferContext = Readonly<{
+  scene: string;
+  mode: string;
+  panel: string;
+  hasTalk: boolean;
+  hasArcade: boolean;
+}>;
+
+export function canStart3DFloorFromLobby(context: Lobby3DTransferContext): boolean {
+  return context.scene === LOBBY3D_SCENE &&
+    context.mode === "street" && context.panel === "lobby-3d" &&
+    !context.hasTalk && !context.hasArcade;
+}
+
+export function canReturnTo3DLobby(
+  context: Lobby3DTransferContext,
+  enteredFrom3DLobby: boolean,
+): boolean {
+  return enteredFrom3DLobby && context.scene === LOBBY3D_SCENE &&
+    context.mode === "casino" && context.panel === "none" &&
+    !context.hasTalk && !context.hasArcade;
+}
