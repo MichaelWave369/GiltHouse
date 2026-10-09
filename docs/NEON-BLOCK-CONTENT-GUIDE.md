@@ -47,6 +47,8 @@ The frame is 320×180 logical pixels, drawn with `fillRect` and scaled by an int
 
 ## Saves
 
+Wick Candle stands on the Midnight Diner threshold on purpose. E talks to Wick. W enters. Do not "fix" that by deleting the door prompt.
+
 Bump `WORLD_VERSION` only when old journals would crash. Add a migration arm in `parseSave` (v0 → v1 is the pattern) and keep unknown items, negative stacks, and bad scenes from loading. Never write `gilt-house-v1` from world code.
 
 ## 3D later
