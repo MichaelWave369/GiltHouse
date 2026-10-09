@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import {
   canOpenFloor3DTable,
   clampFloor3DCamera,
-  FLOOR3D_SPAWN,
   FLOOR3D_STATIONS,
   nearestFloor3DTable,
   validFloor3DGame,
@@ -33,6 +32,7 @@ export function FloorWalk3D({
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const roomRef = useRef<HTMLDivElement>(null);
+  const latestPose = useRef<Floor3DPose>(normalizeFloor3DPose(returnPose));
   const held = useRef(new Set<Motion>());
   const [phase, setPhase] = useState<"loading" | "ready" | "fallback">("loading");
   const [nearGame, setNearGame] = useState<FloorGame | null>(null);
@@ -65,6 +65,7 @@ export function FloorWalk3D({
     let z: number = initial.z;
     let yaw: number = initial.yaw;
     const snapshot = (): Floor3DPose => normalizeFloor3DPose({ x, z, yaw });
+    latestPose.current = snapshot();
     const enter = (game: FloorGame) => onChoose(game, snapshot());
     let oldFrame = 0;
     let currentGame: FloorGame | null = null;
@@ -316,6 +317,7 @@ export function FloorWalk3D({
             x = projected.x;
             z = projected.z;
           }
+          latestPose.current = snapshot();
           camera.position.set(x, 1.65, z);
           camera.lookAt(x + Math.sin(yaw), 1.75, z - Math.cos(yaw));
           const target = nearestFloor3DTable(x, z)?.game ?? null;
@@ -393,7 +395,7 @@ export function FloorWalk3D({
           <span className="mt-1 block text-cream-dim">Drag to look around. Tap tables when close, or use the directory below.</span>
         </p>
         {phase === "ready" && near ? (
-          <button type="button" onClick={() => onChoose(near.game, normalizeFloor3DPose(near ? { x: near.x, z: near.z, yaw: 0 } : null))}
+          <button type="button" onClick={() => onChoose(near.game, latestPose.current)}
             className="press absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full border border-gold bg-ink/95 px-4 py-3 text-sm font-semibold text-gold">
             F · Enter {near.name}
           </button>
@@ -408,7 +410,7 @@ export function FloorWalk3D({
       <section aria-label="Casino games" className="shrink-0 border-t border-line bg-ink px-3 py-2">
         <div role="group" aria-label="Casino table shortcuts" className="mx-auto grid max-w-5xl grid-cols-4 gap-1 sm:grid-cols-8">
           {FLOOR3D_STATIONS.map((station) => (
-            <button type="button" key={station.id} onClick={() => onChoose(station.game, normalizeFloor3DPose(returnPose))}
+            <button type="button" key={station.id} onClick={() => onChoose(station.game, latestPose.current)}
               className="press min-h-11 rounded-lg border border-line bg-panel p-1 text-center text-[0.65rem] font-semibold text-gold hover:border-gold">
               {station.name}
             </button>
