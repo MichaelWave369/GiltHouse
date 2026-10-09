@@ -3,7 +3,6 @@
  * A VISUAL directory for the existing Gilt House casino UI, not a second casino
  * engine. These IDs must remain an explicit subset of the established portals.
  */
-import { PORTALS } from "./content.ts";
 import type { CasinoDoor } from "./types.ts";
 
 export type LobbyStation = Readonly<{
@@ -30,8 +29,7 @@ export function isLobby3DScene(scene: string): boolean {
 }
 
 export function validLobbyStation(view: string): view is CasinoDoor {
-  return LOBBY_STATIONS.some((s) => s.view === view) &&
-    PORTALS.some((p) => p.scene === LOBBY3D_SCENE && p.casino === view);
+  return LOBBY_STATIONS.some((s) => s.view === view);
 }
 
 export function clampLobbyCamera(x: number, z: number): { x: number; z: number } {
