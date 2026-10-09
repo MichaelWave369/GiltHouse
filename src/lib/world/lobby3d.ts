@@ -64,3 +64,60 @@ export function nearbyLobbyStation(x: number, z: number): LobbyStation | null {
 export function canEnterLobbyPortal(view: string, x: number, z: number): boolean {
   return validLobbyStation(view) && nearbyLobbyStation(x, z)?.view === view;
 }
+
+/**
+ * R17: deterministic, browser-local promenade collision.
+ * Model the ORIGINAL R9 scene objects, rather than inventing walls/props.
+ * Pillars match x=±7.9 and z=-7,-2,3,8; brass queue posts match
+ * x=±4.7 and z=0,4,7. The narrow carpet seams are NOT obstacles.
+ * Margins add a modest 0.34 m player radius to visible object dimensions.
+ */
+export const LOBBY_COLLISION_RADIUS = 0.34;
+export const LOBBY_MAX_FRAME_MOVE = 0.8;
+const LOBBY_SWEEP_STEP = 0.07;
+
+export function collidesLobby3DObstacle(x: number, z: number): boolean {
+  if (!Number.isFinite(x) || !Number.isFinite(z)) return true;
+  for (const px of [-7.9, 7.9]) {
+    for (const pz of [-7, -2, 3, 8]) {
+      if (Math.abs(x - px) < 0.29 + LOBBY_COLLISION_RADIUS &&
+          Math.abs(z - pz) < 0.31 + LOBBY_COLLISION_RADIUS) return true;
+    }
+  }
+  for (const px of [-4.7, 4.7]) {
+    for (const pz of [0, 4, 7]) {
+      if (Math.abs(x - px) < 0.0425 + LOBBY_COLLISION_RADIUS &&
+          Math.abs(z - pz) < 0.0425 + LOBBY_COLLISION_RADIUS) return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Substepped, axis-separated slide collision. A stalled frame cannot
+ * teleport the camera through a post; if one axis is blocked the other
+ * remains free. Movement remains bounded by the original R9 room edges.
+ */
+export function advanceLobby3DCamera(
+  x: number, z: number, deltaX: number, deltaZ: number,
+): { x: number; z: number } {
+  const start = clampLobbyCamera(x, z);
+  if (!Number.isFinite(deltaX) || !Number.isFinite(deltaZ) ||
+      collidesLobby3DObstacle(start.x, start.z)) return start;
+  const distance = Math.hypot(deltaX, deltaZ);
+  if (distance <= 0) return start;
+  const travel = Math.min(distance, LOBBY_MAX_FRAME_MOVE);
+  const steps = Math.max(1, Math.ceil(travel / LOBBY_SWEEP_STEP));
+  const stepX = deltaX / distance * travel / steps;
+  const stepZ = deltaZ / distance * travel / steps;
+
+  let cx = start.x;
+  let cz = start.z;
+  for (let i = 0; i < steps; i++) {
+    const nextX = clampLobbyCamera(cx + stepX, cz).x;
+    if (!collidesLobby3DObstacle(nextX, cz)) cx = nextX;
+    const nextZ = clampLobbyCamera(cx, cz + stepZ).z;
+    if (!collidesLobby3DObstacle(cx, nextZ)) cz = nextZ;
+  }
+  return { x: cx, z: cz };
+}
