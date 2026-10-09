@@ -47,10 +47,11 @@ try {
       const response = await page.goto(url, { waitUntil: "domcontentloaded" });
       assert.equal(response?.status(), 200, `Pages route failed: ${viewport.name}`);
       await page.locator(".world-root canvas.pixel-screen").first().waitFor({ state: "visible", timeout: 18000 });
+      await page.locator('[role="dialog"][aria-label="Gilt House title"]').waitFor({ state: "visible", timeout: 18000 });
       await page.waitForFunction(() => {
         const canvas = document.querySelector(".world-root canvas.pixel-screen");
         return canvas instanceof HTMLCanvasElement && canvas.width > 0 && canvas.height > 0;
-      }, { timeout: 15000 });
+      }, undefined, { timeout: 15000 });
       const layout = await page.evaluate(() => {
         const root = document.querySelector(".world-root");
         const canvas = document.querySelector(".world-root canvas.pixel-screen");
