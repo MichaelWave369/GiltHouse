@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import {
-  clampLobbyCamera,
+  advanceLobby3DCamera,
+  collidesLobby3DObstacle,
   LOBBY_STATIONS,
   validLobbyStation,
   nearbyLobbyStation,
@@ -32,6 +33,8 @@ export function GiltLobby3D() {
   const [note, setNote] = useState("");
   const [nearby, setNearby] = useState<string | null>(null);
   const [hint, setHint] = useState("");
+  const [blocked, setBlocked] = useState(false);
+  const [cameraSpot, setCameraSpot] = useState({ x: 0, z: 8 });
   const reduced = useWorld((s) => s.world.prefs.reduced);
   const exit = () => useWorld.getState().closePanel();
 
@@ -64,6 +67,8 @@ export function GiltLobby3D() {
     let onDoorTap: ((x: number, y: number) => void) | undefined;
     let selectedView: string | null = null;
     let lastFrame = 0;
+    let lastHud = 0;
+    let lastBlocked = false;
     const input = pressed.current;
     const element = canvas.current;
     if (!element) return;
@@ -291,19 +296,35 @@ export function GiltLobby3D() {
 
         function animate(timestamp: number) {
           if (disposed || !renderer) return;
-          const dt = Math.min(0.04, lastFrame ? (timestamp - lastFrame) / 1000 : 0);
+          // Keep keyboard movement responsive on software/slow WebGL; swept
+          // collision substeps each frame so lag cannot skip a solid post.
+          const dt = Math.min(0.25, lastFrame ? (timestamp - lastFrame) / 1000 : 0);
           lastFrame = timestamp;
           const turning = (input.has("turnRight") ? 1 : 0) - (input.has("turnLeft") ? 1 : 0);
           yaw = Math.max(-1.15, Math.min(1.15, yaw + turning * dt * 1.2));
           const forward = (input.has("forward") ? 1 : 0) - (input.has("back") ? 1 : 0);
           const sidestep = (input.has("right") ? 1 : 0) - (input.has("left") ? 1 : 0);
+          let collision = false;
           if (dt > 0 && (forward || sidestep)) {
-            const delta = clampLobbyCamera(
-              cx + (Math.sin(yaw) * forward + Math.cos(yaw) * sidestep) * dt * 3.0,
-              cz + (-Math.cos(yaw) * forward + Math.sin(yaw) * sidestep) * dt * 3.0,
-            );
-            cx = delta.x;
-            cz = delta.z;
+            const wishX = Math.sin(yaw) * forward + Math.cos(yaw) * sidestep;
+            const wishZ = -Math.cos(yaw) * forward + Math.sin(yaw) * sidestep;
+            const norm = Math.max(1, Math.hypot(wishX, wishZ));
+            const dx = wishX / norm * dt * 3.0;
+            const dz = wishZ / norm * dt * 3.0;
+            const moved = advanceLobby3DCamera(cx, cz, dx, dz);
+            collision = collidesLobby3DObstacle(cx + dx, cz + dz) &&
+              Math.hypot(moved.x - cx - dx, moved.z - cz - dz) > 0.008;
+            cx = moved.x;
+            cz = moved.z;
+          }
+          if (collision !== lastBlocked) {
+            lastBlocked = collision;
+            setBlocked(collision);
+          }
+          if (timestamp - lastHud > 260) {
+            lastHud = timestamp;
+            setCameraSpot((old) => Math.hypot(old.x - cx, old.z - cz) > 0.03
+              ? { x: cx, z: cz } : old);
           }
           camera.position.set(cx, 1.75, cz);
           camera.lookAt(cx + Math.sin(yaw), 1.85, cz - Math.cos(yaw));
@@ -390,6 +411,18 @@ export function GiltLobby3D() {
           <p className="font-semibold text-gold">WASD walk · Q/E or arrows turn · F enters nearby doors</p>
           <p className="mt-1">Drag to look around. Tap a door after walking close, or choose a room below.</p>
         </div>
+        {status === "ready" ? (
+          <output aria-label="3D grand lobby position"
+            data-x={cameraSpot.x.toFixed(2)} data-z={cameraSpot.z.toFixed(2)}
+            className="pointer-events-none absolute right-3 top-3 rounded-lg border border-gold/30 bg-ink/90 px-3 py-2 font-mono text-[0.65rem] text-cream-dim">
+            X {cameraSpot.x.toFixed(1)} · Z {cameraSpot.z.toFixed(1)}
+          </output>
+        ) : null}
+        {status === "ready" && blocked ? (
+          <p role="status" className="pointer-events-none absolute right-3 top-14 max-w-48 rounded-lg border border-gold/35 bg-ink/90 p-2 text-xs text-gold">
+            Solid column or queue post ahead. Walk around it to continue.
+          </p>
+        ) : null}
         {status === "ready" && nearby ? (
           <button type="button"
             className="press absolute bottom-4 left-1/2 z-10 min-h-11 -translate-x-1/2 rounded-full border border-gold bg-ink/95 px-5 text-sm font-semibold text-gold shadow-lg"
