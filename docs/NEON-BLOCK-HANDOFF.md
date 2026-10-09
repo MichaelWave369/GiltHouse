@@ -1,50 +1,40 @@
 # Neon Block handoff
 
-## Completed in the release-candidate pass
+## Completed
 
-- Title card with New Game, Continue, quick casino, controls, music, mute, and reduced motion. Chapter-one card after Ivo finishes The Midnight Signal.
-- E talks or uses a hotspot. W uses a door. Both prompts show when Wick (or anyone) stands on a threshold. Touch gets a Door button when a door is in range.
-- Held keys release on blur, a hidden tab, and pointer cancel. Game keys do not scroll the page unless you are typing in a field.
+- Title, continue, creator, chapter card after Ivo. Closing the intro now records that it was seen, so a later Continue does not replay it.
+- E talks or uses a hotspot. W uses a door. Both prompts show when someone stands on a threshold.
+- Held keys release on blur, a hidden tab, and pointer cancel.
 - Agent review checks direction, NPC id, emote, source, and privileged fields. Remote play stays off.
-- Arcade cabinets have a start screen. Leaving clears a pending Pulse Line payout timer. Forged scores do not pay.
-- Dottie has a "usual" line after you have tasted coffee.
-- Walks use four stride frames. A few people wear an apron, phones, a coat, or a spark so they are easier to tell apart. Still procedural pixels, not a licensed sheet.
-- CI workflow `.github/workflows/neon-block.yml` runs `npm ci`, `npm test`, typecheck, lint, and build.
-- `.vercel/output` is treated as generated and ignored. It is not required source.
+- Pulse Line counts down 3-2-1. Marquee Memory shows Ready before the bulbs. Cooldown and forged scores are enforced.
+- Street and rooms are still original procedural pixels at 320×180, now with readable marquees, awnings, lamps, wet neon, and faces you can tell apart (apron, phones, coat, spark, glasses, mustache).
+- Sable notices a jacket. Harvey notices Alley Brass in the bag. Ivo comments if the pin is already known. Dottie remembers coffee.
+- Side errands (Griddle Jazz, Lou, the locket, the lost photograph) have unit coverage. The main chapter was also clicked through in a browser.
+- CI workflow `.github/workflows/neon-block.yml` runs `npm ci`, `npm test`, typecheck, lint, and build. On PR #3 it was green before this polish commit; this commit will run it again.
+- `.vercel/output` is generated and ignored.
 
 ## Still incomplete
 
-- Browser play of Velvet, the arcade cabinets, every interior, and the full Midnight Signal chain.
-- Listening proof for the street bus.
-- Landscape, tablet, and 1920×1080 passes.
-- Answering all eight Training Lab challenges in a browser.
+- Street audio has not been listened to on speakers. Buses exist. Do not call them verified.
+- Tablet size was not given its own pass. 390×844, 844×390, and 1920×1080 were.
 - A second district, weather, and a rooftop room.
 - Remote PhiBot play.
 
-## Files touched for this pass
+## Files
 
-World rules and UI: `src/lib/world/*`, `src/components/world/*`. Small casino-side fixes so lint is clean: `src/lib/casino/agents.ts`, `src/lib/casino/training-lab.test.ts`, `src/casino-ambient.d.ts`, `src/lib/app-data/client.server.ts`, `src/lib/world/save.ts` unused import. PWA tests now pass an isolated cwd so Gilt House's real `site.json` does not leak into template assertions. Docs in `docs/NEON-BLOCK-*.md`.
+World rules and UI: `src/lib/world/*`, `src/components/world/*`. Docs in `docs/NEON-BLOCK-*.md`.
 
 Casino odds, payouts, and the chip key were not changed. City369 was not touched.
 
-## Tests
-
-See `docs/NEON-BLOCK-QA.md` for the command results and which journeys were actually clicked.
-
 ## Known bugs
 
-- A person on a door no longer hides the door, but you do have to use W or the Door line. E talks.
-- Street music still waits for a click or key after a reload.
-- The chip purse is still not written until the casino store saves a change. That predates the street.
-- Encounters can still feel early if you pace the sidewalk. Cooldown is about 70 seconds after one fires.
-
-## Security
-
-No real-money wagering, no chip-to-token conversion, no paid-app imports, no remote model calls. Browser saves are editable. Do not treat them as authority.
+- E still talks when a person and a door overlap. Use W or the Door line to enter.
+- Street music waits for a click or key after a reload.
+- The chip purse is not written until the casino store saves a change. That predates the street.
+- Encounters can open while you are walking. Escape leaves them. Cooldown is about 70 seconds after one fires.
 
 ## Next rungs
 
-1. Click Velvet, both cabinets, and the Midnight Signal chain in a browser and fix whatever that walk finds.
-2. Listen to the street bus on a real machine and mark audio verified only after that.
-3. Add one more block only after this one has been hand-walked.
-4. Any real agent belongs behind `reviewAgentAction`, with a budget that stays at zero until a person raises it.
+1. Listen to the street bus and mark audio verified only after that.
+2. Add one more block only after this one has been hand-walked. It has.
+3. Any real agent belongs behind `reviewAgentAction`, with a budget that stays at zero until a person raises it.

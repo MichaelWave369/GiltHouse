@@ -136,7 +136,7 @@ export function WorldOverlay() {
   );
 }
 
-function Sheet({ children, title }: { children: ReactNode; title?: string }) {
+function Sheet({ children, title, onClose }: { children: ReactNode; title?: string; onClose?: () => void }) {
   const close = useWorld((s) => s.closePanel);
   const panel = useWorld((s) => s.panel);
   return (
@@ -146,7 +146,7 @@ function Sheet({ children, title }: { children: ReactNode; title?: string }) {
           <div className="mb-3 flex items-center justify-between gap-3">
             <h2 className="font-display text-2xl text-cream italic">{title}</h2>
             {panel !== "create" ? (
-              <button type="button" className="press h-10 rounded-full border border-line px-3 text-sm" onClick={() => close()}>
+              <button type="button" className="press h-10 rounded-full border border-line px-3 text-sm" onClick={() => (onClose ? onClose() : close())}>
                 Close
               </button>
             ) : null}
@@ -313,7 +313,7 @@ function Chapter() {
 
 function Intro() {
   return (
-    <Sheet title="A little after two">
+    <Sheet title="A little after two" onClose={() => useWorld.getState().dismissIntro()}>
       <p className="text-sm leading-relaxed text-cream">
         The Neon Block is awake in the way only a fictional downtown manages: marquees counting, a diner that never locks, Gilt House pouring play chips that cannot become money.
       </p>

@@ -10,6 +10,7 @@ const COLORS = [
 export function PulseGame({ onDone, onClose }: { onDone: (score: number, total: number) => void; onClose: () => void }) {
   const total = 8;
   const [armed, setArmed] = useState(false);
+  const [count, setCount] = useState(0);
   const [beat, setBeat] = useState(0);
   const [hits, setHits] = useState(0);
   const [pos, setPos] = useState(0);
@@ -26,7 +27,13 @@ export function PulseGame({ onDone, onClose }: { onDone: (score: number, total: 
   }, []);
 
   useEffect(() => {
-    if (!armed) return;
+    if (!armed || count <= 0) return;
+    const timer = window.setTimeout(() => setCount((value) => value - 1), 420);
+    return () => window.clearTimeout(timer);
+  }, [armed, count]);
+
+  useEffect(() => {
+    if (!armed || count > 0) return;
     start.current = performance.now();
     let frame = 0;
     const loop = (now: number) => {
@@ -37,10 +44,10 @@ export function PulseGame({ onDone, onClose }: { onDone: (score: number, total: 
     };
     frame = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(frame);
-  }, [armed]);
+  }, [armed, count]);
 
   function strike() {
-    if (!armed || done.current || beat >= total) return;
+    if (!armed || count > 0 || done.current || beat >= total) return;
     const good = pos > 0.4 && pos < 0.6;
     const nextHits = hitsRef.current + (good ? 1 : 0);
     hitsRef.current = nextHits;
@@ -60,7 +67,7 @@ export function PulseGame({ onDone, onClose }: { onDone: (score: number, total: 
         <h3 className="font-display text-2xl text-cream italic">Pulse Line</h3>
         <p className="text-sm text-cream-dim">Eight beats. Catch the sweep inside the gold window. A good set pays street tokens. It never pays chips.</p>
         <div className="flex gap-2">
-          <button type="button" className="press h-12 flex-1 rounded-full bg-gold font-medium text-ink" onClick={() => setArmed(true)}>
+          <button type="button" className="press h-12 flex-1 rounded-full bg-gold font-medium text-ink" onClick={() => { setArmed(true); setCount(3); }}>
             Start
           </button>
           <button type="button" className="press h-12 rounded-full border border-line px-4 text-cream" onClick={onClose}>
@@ -80,7 +87,10 @@ export function PulseGame({ onDone, onClose }: { onDone: (score: number, total: 
         </p>
       </div>
       <p className="text-sm text-cream-dim">Catch the sweep in the gold window. Timing only — the cabinet pays street tokens, never chips.</p>
-      <div className="relative h-12 overflow-hidden rounded-full border border-line bg-ink">
+      {count > 0 ? (
+        <p className="font-display text-4xl text-gold italic" aria-live="polite">{count}</p>
+      ) : null}
+      <div className={`relative h-12 overflow-hidden rounded-full border border-line bg-ink ${count > 0 ? "opacity-40" : ""}`}>
         <div className="absolute inset-y-0 left-[40%] w-[20%] bg-gold/30" />
         <div className="absolute top-1 bottom-1 w-3 rounded-full bg-gold" style={{ left: `calc(${pos * 100}% - 6px)` }} />
       </div>
@@ -127,21 +137,28 @@ export function MemoryGame({ onDone, onClose }: { onDone: (score: number, total:
     let cancelled = false;
     setPhase("show");
     setCursor(0);
-    let step = 0;
-    const timer = window.setInterval(() => {
+    setLit(null);
+    const delay = window.setTimeout(() => {
       if (cancelled) return;
-      if (step >= sequence.length) {
-        window.clearInterval(timer);
-        setLit(null);
-        setPhase("input");
-        return;
-      }
-      setLit(sequence[step] ?? null);
-      step += 1;
-    }, 520);
+      let step = 0;
+      const timer = window.setInterval(() => {
+        if (cancelled) return;
+        if (step >= sequence.length) {
+          window.clearInterval(timer);
+          setLit(null);
+          setPhase("input");
+          return;
+        }
+        setLit(sequence[step] ?? null);
+        step += 1;
+      }, 520);
+      cleanup.timer = timer;
+    }, 640);
+    const cleanup: { timer?: number } = {};
     return () => {
       cancelled = true;
-      window.clearInterval(timer);
+      window.clearTimeout(delay);
+      if (cleanup.timer != null) window.clearInterval(cleanup.timer);
     };
   }, [round, armed]);
 
@@ -191,7 +208,7 @@ export function MemoryGame({ onDone, onClose }: { onDone: (score: number, total:
         <p className="text-sm text-cream-dim">Round {Math.min(round + 1, total)} / {total}</p>
       </div>
       <p className="text-sm text-cream-dim">
-        {phase === "show" ? "Watch the bulbs." : "Repeat them. A miss ends the set."}
+        {phase === "show" ? (lit == null ? "Ready." : "Watch the bulbs.") : "Repeat them. A miss ends the set."}
       </p>
       <div className="grid grid-cols-2 gap-2">
         {COLORS.map((color, index) => (

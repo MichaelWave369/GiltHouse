@@ -677,8 +677,13 @@ export const NPCS: ActorDef[] = [
         choices: [
           { id: "shop", text: "Show me what walks.", shop: true },
           { id: "style", text: "What should I try first?", next: "style" },
+          { id: "noticed", text: "Did the sidewalk notice?", next: "noticed", minStyle: 2 },
           leave(),
         ],
+      },
+      noticed: {
+        text: "Sable tilts their head the way a mirror does when it is being kind. 'The jacket said hello before you did. Vinny at Starlight will pretend he discovered you. Let him. The rope is the only snob on the block, and even it likes a good shoulder.'",
+        choices: [{ id: "shop", text: "Show me the rest of the rack.", shop: true }, leave("I'll go stand somewhere gold.")],
       },
       style: {
         text: "A jacket, then something small near your face. Equip them. If you only buy and leave them in the bag, the sidewalk can't see your effort and Vinny certainly won't.",
@@ -795,9 +800,14 @@ export const NPCS: ActorDef[] = [
             next: "griddle",
             quest: "q-griddle",
           },
+          { id: "played", text: "The block is humming your brass.", next: "played", hasItem: "alley-brass" },
           { id: "radio", text: "What's the radio doing?", next: "radio" },
           leave(),
         ],
+      },
+      played: {
+        text: "Harvey almost smiles, which for him is a weather event. 'Then the street is doing its job. Don't tell the radio. It gets jealous and starts counting again.'",
+        choices: [leave("I'll keep the volume neighborly.")],
       },
       griddle: {
         text: "Of course she does. Tell her the trumpet bin is a curated ecosystem, not seasoning. The record is in the bin, priced like a record, not like a favor.",
@@ -1088,8 +1098,13 @@ export const NPCS: ActorDef[] = [
             ],
           },
           { id: "familiar", text: "Have we met?", next: "familiar" },
+          { id: "again", text: "The pin is still warm.", next: "again", requireFlag: "signal:known" },
           leave("Good night, then."),
         ],
+      },
+      again: {
+        text: "Ivo does not look at the pin. They look at the ceiling. 'It stays warm. I dislike that it is not a metaphor. If you start answering the count out loud, eat something at Dottie's. The roof can wait. It has waited for years.'",
+        choices: [leave("I'll get a booth first.")],
       },
       signal: {
         text: "Ivo's voice drops the lobby voice. 'Mara Gilt was my aunt. She tuned the signs to a count the night shift could share: three, six, nine. Not a spell. A way to say the doors are still open. You heard her. That was the whole mystery. Twenty tokens from the lost-and-found jar, and her pin. It doesn't spend. It just shows.'",

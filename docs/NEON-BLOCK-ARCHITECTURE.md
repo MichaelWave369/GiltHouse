@@ -21,7 +21,7 @@ World rules are plain data and functions. The canvas is a view.
 | `src/lib/world/logic.ts` | Movement, collision, interact, dialogue, shop, arcade payouts, objectives |
 | `src/lib/world/save.ts` | Versioned parse, migrate v0 → v1, corrupt fallback |
 | `src/lib/world/store.ts` | Zustand runtime: panels, talk, arcade, casino door |
-| `src/lib/world/draw.ts` | 320×180 pixel frame, nearest-neighbor scaled in the game loop |
+| `src/lib/world/draw.ts` | 320×180 pixel frame, nearest-neighbor scaled in the game loop. Facades, interiors, and people are drawn in code. Marquee names use a 3×5 pixel alphabet.
 | `src/lib/world/agent.ts` | Disabled remote-agent contract |
 | `src/components/world/engine.tsx` | rAF loop, keyboard, touch, audio, `__controlsTest` |
 | `src/components/world/overlay.tsx` | HUD, dialogue, shops, journal, map, creator |

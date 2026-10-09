@@ -29,6 +29,8 @@ Useful gates:
 
 Effects are data (`tokens`, `energy`, `charm`, `knowledge`, `rep`, `flag`, `item`, `take`, `quest`, `jukebox`). They must not grant chips.
 
+People already react to the walk: Dottie offers "The usual" after `tasted:coffee`. Sable's "Did the sidewalk notice?" requires `minStyle` 2 (a jacket is enough). Harvey mentions Alley Brass only if it is in the bag. Ivo's warm-pin line requires `signal:known`. Wick Candle stands on the Midnight Diner door on purpose. Do not delete that overlap. E talks to Wick. W still enters.
+
 ## Quests
 
 Add a `QUESTS` entry (title, step strings, done line) and set it active with a quest effect. If the objective marker needs a specific spot, extend `currentObjective` in `logic.ts`. Journal rows appear automatically once the quest exists on the save.

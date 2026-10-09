@@ -241,6 +241,51 @@ test("remote agents cannot act and local scripts must be well formed", () => {
   assert.equal(outsider.allowed, false);
 });
 
+test("side errands finish: griddle, lou, locket, and the lost photograph", () => {
+  let state = pickChoice(defaultWorld(), "npc", "kit", "root", "job").state;
+  state = pickChoice({ ...state, scene: "diner" }, "npc", "dottie", "root", "errand").state;
+  assert.equal(state.quests["q-griddle"]?.status, "active");
+  assert.equal(state.tokens, 49);
+  const bought = purchase({ ...state, scene: "records" }, "griddle-jazz");
+  assert.equal(bought.ok, true);
+  state = bought.state;
+  const back = pickChoice({ ...state, scene: "diner" }, "npc", "dottie", "root", "deliver");
+  assert.equal(back.state.quests["q-griddle"]?.status, "complete");
+  assert.equal(back.state.inventory["griddle-jazz"] ?? 0, 0);
+  assert.equal(back.state.inventory["giant-platter"], 1);
+  assert.ok(back.state.tokens > state.tokens);
+
+  const lou = pickChoice(pickChoice(defaultWorld(), "npc", "lou", "root", "hear").state, "npc", "lou", "pitch", "reject");
+  assert.equal(lou.state.quests["q-lou"]?.status, "complete");
+  assert.equal(lou.state.flags["lou:done"], true);
+  assert.equal(lou.state.knowledge, 2);
+  assert.equal("bank" in lou.state, false);
+
+  const held = pickChoice({ ...defaultWorld(), scene: "pawn" }, "npc", "cleo", "root", "locket").state;
+  assert.equal(held.inventory.locket, 1);
+  const returned = pickChoice({ ...held, scene: "mirage" }, "npc", "ivo", "root", "locket");
+  assert.equal(returned.state.quests["q-locket"]?.status, "complete");
+  assert.equal(returned.state.inventory.locket ?? 0, 0);
+
+  const photo = pickChoice(defaultWorld(), "encounter", "photo", "root", "keep").state;
+  assert.equal(photo.quests["q-photo"]?.status, "active");
+  const filed = pickChoice({ ...photo, scene: "mirage" }, "npc", "ivo", "root", "photo");
+  assert.equal(filed.state.quests["q-photo"]?.status, "complete");
+  assert.equal(filed.state.inventory.photo ?? 0, 0);
+  assert.equal(filed.state.tokens, photo.tokens + 8);
+
+  const dressed = equipItem(
+    purchase({ ...defaultWorld(), scene: "velvet", tokens: 80 }, "leather-jacket").state,
+    "leather-jacket",
+  );
+  assert.ok(dressed.state.style >= 2);
+  const noticed = pickChoice(dressed.state, "npc", "sable", "root", "noticed");
+  assert.equal(noticed.missing, undefined);
+  assert.match(noticed.text, /jacket/i);
+  const plain = pickChoice(defaultWorld(), "npc", "sable", "root", "noticed");
+  assert.equal(plain.missing, true);
+});
+
 test("existing casino routes remain mounted in the floor and the app", async () => {
   const app = await readFile(new URL("../../components/casino/app.tsx", import.meta.url), "utf8");
   const floor = await readFile(new URL("../../components/casino/floor.tsx", import.meta.url), "utf8");
