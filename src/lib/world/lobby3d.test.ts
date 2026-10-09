@@ -14,6 +14,8 @@ import {
   advanceLobby3DCamera,
   LOBBY_COLLISION_RADIUS,
   LOBBY_MAX_FRAME_MOVE,
+  canStart3DFloorFromLobby,
+  canReturnTo3DLobby,
 } from "./lobby3d.ts";
 import { PORTALS } from "./content.ts";
 
@@ -135,4 +137,47 @@ test("R17 all four real lobby doors remain accessible from the center aisle", ()
       `R17 must not trap visitor away from ${station.name}, x=${pos.x}, z=${pos.z}`);
     assert.equal(canEnterLobbyPortal(station.view, 0, 8), false);
   }
+});
+
+test("R18: only the actual in-world 3D lobby can launch the direct 3D floor", () => {
+  const real = {
+    scene: "gilt-lobby", mode: "street", panel: "lobby-3d",
+    hasTalk: false, hasArcade: false,
+  };
+  assert.equal(canStart3DFloorFromLobby(real), true);
+  for (const disallowed of [
+    { scene: "neon-block" },
+    { scene: "diner" },
+    { mode: "casino" },
+    { panel: "none" },
+    { panel: "pause" },
+    { panel: "title" },
+    { hasTalk: true },
+    { hasArcade: true },
+  ]) {
+    assert.equal(canStart3DFloorFromLobby({ ...real, ...disallowed }), false,
+      `3D transfer should reject ${JSON.stringify(disallowed)}`);
+  }
+});
+
+test("R18: return needs an authentic ephemeral lobby-origin flag", () => {
+  const inside = {
+    scene: "gilt-lobby", mode: "casino", panel: "none",
+    hasTalk: false, hasArcade: false,
+  };
+  assert.equal(canReturnTo3DLobby(inside, true), true);
+  assert.equal(canReturnTo3DLobby(inside, false), false,
+    "ordinary 2D casino entry does not authorize a 3D lobby return");
+  for (const invalid of [
+    { scene: "neon-block" },
+    { mode: "street" },
+    { panel: "lobby-3d" },
+    { panel: "pause" },
+    { hasTalk: true },
+    { hasArcade: true },
+  ]) {
+    assert.equal(canReturnTo3DLobby({ ...inside, ...invalid }, true), false);
+  }
+  assert.equal("bank" in inside, false);
+  assert.equal("chips" in inside, false);
 });
