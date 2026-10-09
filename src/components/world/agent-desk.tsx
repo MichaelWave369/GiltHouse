@@ -34,6 +34,8 @@ export function AgentDesk() {
   const nearby = observed.nearbyActorIds[0];
   const person = NPCS.find((npc) => npc.id === nearby);
   const atLimit = actions.length >= MAX_LOCAL_ACTIONS;
+  const reduceMotion = snapshot.prefs.reduced ||
+    (typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -76,7 +78,7 @@ export function AgentDesk() {
   }
 
   function startPlayback() {
-    if (snapshot.prefs.reduced || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    if (reduceMotion) {
       return;
     }
     if (actions.length === 0) return;
@@ -127,7 +129,7 @@ export function AgentDesk() {
         <button type="button" onClick={() => {
           if (playing) setPlaying(false);
           else startPlayback();
-        }} disabled={actions.length === 0 || snapshot.prefs.reduced}
+        }} disabled={actions.length === 0 || reduceMotion}
           className="press min-h-11 rounded-xl border border-line px-3 text-sm disabled:opacity-40">
           {playing ? "Pause playback" : "Play preview"}
         </button>
