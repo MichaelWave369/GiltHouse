@@ -31,7 +31,9 @@ try {
   }
   assert.ok(running, `Pages preview did not start: ${output}`);
   browser = await chromium.launch({ headless: true });
-  const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+  // Use a moderate software-rendering resolution; desktop/mobile layout is
+  // already separately qualified at full sizes in check-pages-browser.
+  const page = await browser.newPage({ viewport: { width: 960, height: 680 }, deviceScaleFactor: 0.75 });
   const errors = [];
   page.on("pageerror", (error) => errors.push(error.message));
   try {
@@ -55,6 +57,63 @@ try {
     // The showroom must not let F teleport from its spawn point.
     await page.keyboard.press("f");
     await room.waitFor({ state: "visible" });
+
+    // R13: where WebGL initializes, verify real player movement against
+    // the physical Blackjack table. Other environments retain HTML fallback.
+    await page.waitForFunction(() =>
+      Boolean(document.querySelector('output[aria-label="3D camera location"]')) ||
+      document.body.textContent?.includes("3D graphics aren't supported here."),
+      null, { timeout: 15000 });
+    const hud = room.getByLabel("3D camera location");
+    if (await hud.isVisible()) {
+      // Playwright's last clicked casino shortcut can own focus. The game
+      // intentionally ignores movement while a button is focused.
+      await room.focus();
+      assert.equal(
+        await page.evaluate(() => document.activeElement?.getAttribute("aria-label")),
+        "Gilt House 3D gaming floor",
+        "Room must own keyboard focus for movement controls",
+      );
+      console.log("R13: focused 3D room, starting camera Z:", await hud.getAttribute("data-z"));
+      await page.keyboard.down("w");
+      try {
+        try {
+          await page.waitForFunction(() => {
+            const node = document.querySelector('output[aria-label="3D camera location"]');
+            return node && Number(node.getAttribute("data-z")) < 7.3;
+          }, null, { timeout: 12000 });
+        } catch (error) {
+          console.error("3D movement probe timed out. HUD:", await hud.getAttribute("data-z"),
+            "focused:", await page.evaluate(() => document.activeElement?.outerHTML?.slice(0, 170)));
+          throw error;
+        }
+      } finally {
+        await page.keyboard.up("w");
+      }
+      await page.keyboard.down("a");
+      try {
+        await page.waitForFunction(() => {
+          const node = document.querySelector('output[aria-label="3D camera location"]');
+          return node && Number(node.getAttribute("data-x")) < -2.95;
+        }, null, { timeout: 12000 });
+        // Continue to press against the table; old R11 would pass through it.
+        await page.waitForTimeout(950);
+      } finally {
+        await page.keyboard.up("a");
+      }
+      await page.waitForTimeout(350);
+
+      const x = Number(await hud.getAttribute("data-x"));
+      const z = Number(await hud.getAttribute("data-z"));
+      assert.ok(x > -3.15 && x < -1.9,
+        `Table collision should stop the camera at the Blackjack aisle rail, not inside felt: x=${x}`);
+      assert.ok(z < 7.3 && z > 4.5, `The aisle should remain accessible: z=${z}`);
+      await room.getByRole("button", { name: /F · Enter THE SHOE/ }).waitFor({ state: "visible" });
+      console.log(`PASS: real Three.js keyboard approach stopped at solid Blackjack rail, x=${x}, z=${z}`);
+    } else {
+      console.log("SKIP: 3D GPU movement probe unavailable; accessible HTML casino table routing remains tested.");
+    }
+
     await room.getByRole("button", { name: "Back to casino directory" }).click();
     await room.waitFor({ state: "detached" });
     await open.waitFor({ state: "visible" });
@@ -87,7 +146,7 @@ try {
     assert.equal(await page.evaluate(() => localStorage.getItem("gilt-house-v1")), before,
       "Navigating in 3D must not change casino chip storage");
     assert.deepEqual(errors, [], "No unhandled browser errors during showroom journey");
-    console.log("PASS: 3D floor opens, Blackjack returns to 3D with restored view, explicit 3D exit clears handoff, direct 2D game stays 2D, chip save unchanged.");
+    console.log("PASS: 3D floor opens, physical table collision checked when WebGL is present, Blackjack returns to 3D, direct 2D game remains 2D, chip save unchanged.");
   } finally {
     await page.close();
   }
