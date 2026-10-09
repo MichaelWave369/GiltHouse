@@ -91,6 +91,34 @@ try {
     }
     await room.getByRole("button", { name: "Back to 16-bit lobby" }).click();
     await room.waitFor({ state: "detached" });
+
+    // R18: crossing the existing 3D Grand Lobby Floor doorway should launch
+    // the existing optional 3D gaming floor, not stop at the 2D directory.
+    await page.getByRole("button", { name: "Enter 3D lobby" }).click();
+    await room.waitFor({ state: "visible" });
+    await room.getByRole("button", { name: /THE FLOOR/ }).click();
+    const gaming3D = page.getByRole("dialog", { name: "Gilt House 3D gaming floor" });
+    await gaming3D.waitFor({ state: "visible", timeout: 20000 });
+    await gaming3D.getByRole("button", { name: "Back to 3D Grand Lobby" }).waitFor({ state: "visible" });
+    await gaming3D.getByRole("button", { name: "THE SHOE" }).waitFor({ state: "visible" });
+    assert.equal(await page.evaluate(() => localStorage.getItem("gilt-house-v1")), before,
+      "R18 direct 3D-to-3D transfer must not change the chip purse");
+
+    await gaming3D.getByRole("button", { name: "Back to 3D Grand Lobby" }).click();
+    await gaming3D.waitFor({ state: "detached" });
+    await room.waitFor({ state: "visible", timeout: 18000 });
+    await room.getByRole("button", { name: "Back to 16-bit lobby" }).click();
+    await room.waitFor({ state: "detached" });
+
+    // R18 regression: a normal 2D floor visit must NOT inherit the 3D route.
+    await page.getByRole("button", { name: "The Floor", exact: true }).click();
+    await page.getByRole("button", { name: /Explore the 3D gaming floor/ })
+      .waitFor({ state: "visible", timeout: 12000 });
+    assert.equal(await gaming3D.count(), 0, "classic casino visit stays in 2D");
+    await page.getByRole("button", { name: "Back to the Neon Block" }).click();
+    await page.getByRole("button", { name: "Enter 3D lobby" }).waitFor({ state: "visible" });
+
+    // Existing Training Lab link from 3D and 16-bit return must still work.
     await page.getByRole("button", { name: "Enter 3D lobby" }).click();
     await page.getByRole("dialog", { name: "Gilt House 3D promenade" })
       .getByRole("button", { name: /TRAINING LAB/ }).click();
@@ -100,7 +128,7 @@ try {
     assert.equal(await page.evaluate(() => localStorage.getItem("gilt-house-v1")), before,
       "3D lobby and Training Lab navigation must not change play-chip storage");
     assert.deepEqual(errors, [], "No unhandled browser exceptions during 3D navigation");
-    console.log("PASS: R17 solid grand-lobby geometry verified in WebGL where available; 3D opens, returns to 2D, enters Training Lab and keeps chip purse unchanged.");
+    console.log("PASS: R18 Grand Lobby → 3D gaming floor → Grand Lobby, 2D classic directory isolated, R17 collision and Training Lab preserved without chip changes.");
   } finally {
     await page.close();
   }
