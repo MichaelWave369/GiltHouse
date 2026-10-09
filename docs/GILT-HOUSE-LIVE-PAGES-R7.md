@@ -69,3 +69,13 @@ Open `http://127.0.0.1:4173/GiltHouse/`. Test actual keyboard/touch controls, th
 - Verify if the sportsbook unavailable screen is acceptable or whether a future read-only static scoreboard sourced from a public, CORS-permitting endpoint is desired. Do **not** silently change casino payouts or existing tickets.
 - If GitHub Pages deployment fails due to repository configuration, enable Actions source and rerun the workflow. Do not change the full-stack app or create another public repo to work around this.
 - Future 3D showcases can be lazy-loaded as optional, separate experiences once the static build has passed manual acceptance.
+
+## R8 post-deployment visual regression fix
+
+The initial R7 Pages deployment was visible but essentially unstyled: the separate Vite root caused Tailwind v4's automatic discovery to omit `src/` utility classes. The missing `.flex`, `.relative`, `.absolute`, viewport sizing and color utilities collapsed the canvas layout and left tiny plain text at the top of a black screen. The original Grok-hosted build was unaffected.
+
+R8 changes **only the Pages stylesheet entry** to `pages-static/styles.css`, which imports the normal app stylesheet and explicitly scans both `../src` and the static source folder. `npm run check:pages` now fails if critical classes are missing, rather than merely asserting that a stylesheet exists.
+
+R8 also adds **real headless Chromium smoke checks** before any Pages deployment. Run `npx playwright install --with-deps chromium && npm run check:pages:browser` after `npm run build:pages`. The browser test checks on desktop and mobile that the pixel canvas fills the viewport, the title uses the intended typography, no horizontal overflow occurs, and no unhandled browser exceptions fire. CI uploads screenshots as artifacts. These checks guard against this specific regression, not every game interaction or physical device.
+
+After merging, GitHub Actions automatically rebuilds and deploys the static site. If an old page remains, wait for the **Gilt House Pages** deployment to succeed and hard-refresh Ctrl+Shift+R. Do not clear the browser's local storage; that would discard local-only game progress.
