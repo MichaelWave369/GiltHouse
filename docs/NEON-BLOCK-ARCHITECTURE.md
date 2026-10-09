@@ -57,3 +57,7 @@ The optional Menu → Agent Desk is an in-memory, deterministic *rehearsal*, not
 ## R5 visual playback of rehearsed visitors
 
 The Backstage Agent Desk now reuses `renderFrame` to show an isolated copied scene at a hypothetical visitor x-coordinate. It does **not** inject characters into the actual world or alter saved state. The local scripted patrol is deterministic and limited by `MAX_LOCAL_ACTIONS`. Manual stepping remains available for reduced-motion settings. See `docs/NEON-BLOCK-VISITOR-PLAYBACK-R5.md`. This is *not* live PhiBot execution or verified agent training.
+
+## R6 manual model-proposal inspection
+
+The Backstage Agent Desk can now display a privacy-minimal prompt suitable for an operator-selected local model **outside the application**. Its response is pasted as untrusted JSON. `model-proposal.ts` separately validates exact schemas and actions and produces a **read-only hypothetical x-position projection**. It never labels model output `local-script`, does not call the game action dispatcher, and cannot write to the game store. There is no API call, live PhiBot, Ollama connector, external trust grant, or customer-data sharing. See `docs/NEON-BLOCK-MANUAL-MODEL-PROPOSALS-R6.md`.
