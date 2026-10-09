@@ -74,9 +74,17 @@ try {
         await page.keyboard.up("w");
       }
       await page.keyboard.down("a");
-      await page.waitForTimeout(2600);
-      await page.keyboard.up("a");
-      await page.waitForTimeout(400);
+      try {
+        await page.waitForFunction(() => {
+          const node = document.querySelector('output[aria-label="3D camera location"]');
+          return node && Number(node.getAttribute("data-x")) < -2.95;
+        }, null, { timeout: 12000 });
+        // Continue to press against the table; old R11 would pass through it.
+        await page.waitForTimeout(950);
+      } finally {
+        await page.keyboard.up("a");
+      }
+      await page.waitForTimeout(350);
 
       const x = Number(await hud.getAttribute("data-x"));
       const z = Number(await hud.getAttribute("data-z"));
