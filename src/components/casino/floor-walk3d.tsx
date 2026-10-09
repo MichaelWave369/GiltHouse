@@ -40,6 +40,7 @@ export function FloorWalk3D({
   const [nearGame, setNearGame] = useState<FloorGame | null>(null);
   const [notice, setNotice] = useState("");
   const [tableBlocked, setTableBlocked] = useState(false);
+  const [cameraLocation, setCameraLocation] = useState(() => safeFloor3DReturnPose(returnPose));
   const [restored] = useState(() => returnPose !== null);
   const [reduced] = useState(() => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
 
@@ -73,6 +74,7 @@ export function FloorWalk3D({
     let oldFrame = 0;
     let currentGame: FloorGame | null = null;
     let wasBlocked = false;
+    let lastHudUpdate = 0;
     let start: { x: number; y: number } | null = null;
     let pointerX: number | null = null;
     let dragged = false;
@@ -332,6 +334,13 @@ export function FloorWalk3D({
             setTableBlocked(blocked);
           }
           latestPose.current = snapshot();
+          // Throttled, readable position HUD doubles as actual-browser physics QA.
+          if (stamp - lastHudUpdate >= 240) {
+            lastHudUpdate = stamp;
+            setCameraLocation((last) =>
+              Math.abs(last.x - x) > 0.04 || Math.abs(last.z - z) > 0.04 || Math.abs(last.yaw - yaw) > 0.1
+                ? snapshot() : last);
+          }
           camera.position.set(x, 1.65, z);
           camera.lookAt(x + Math.sin(yaw), 1.75, z - Math.cos(yaw));
           const target = nearestFloor3DTable(x, z)?.game ?? null;
@@ -414,8 +423,14 @@ export function FloorWalk3D({
             F · Enter {near.name}
           </button>
         ) : null}
+        {phase === "ready" ? (
+          <output aria-label="3D camera location" data-x={cameraLocation.x.toFixed(2)} data-z={cameraLocation.z.toFixed(2)}
+            className="pointer-events-none absolute right-3 top-3 rounded-lg border border-gold/30 bg-ink/90 px-3 py-2 font-mono text-[0.65rem] text-cream-dim">
+            X {cameraLocation.x.toFixed(1)} · Z {cameraLocation.z.toFixed(1)}
+          </output>
+        ) : null}
         {tableBlocked && phase === "ready" ? (
-          <p role="status" className="pointer-events-none absolute right-3 top-3 max-w-52 rounded-lg border border-gold/40 bg-ink/90 p-3 text-xs text-gold">
+          <p role="status" className="pointer-events-none absolute right-3 top-14 max-w-52 rounded-lg border border-gold/40 bg-ink/90 p-3 text-xs text-gold">
             Solid table ahead. Walk around the rail, or press F when nearby.
           </p>
         ) : null}
