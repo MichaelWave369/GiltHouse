@@ -393,7 +393,7 @@ export function GiltLobby3D() {
         {status === "ready" && nearby ? (
           <button type="button"
             className="press absolute bottom-4 left-1/2 z-10 min-h-11 -translate-x-1/2 rounded-full border border-gold bg-ink/95 px-5 text-sm font-semibold text-gold shadow-lg"
-            onClick={() => { if (canEnterLobbyPortal(nearby, 0, -6.4)) useWorld.getState().enterCasino(nearby); }}>
+            onClick={() => { if (validLobbyStation(nearby)) useWorld.getState().enterCasino(nearby); }}>
             F · Enter {LOBBY_STATIONS.find((s) => s.view === nearby)?.name ?? "room"}
           </button>
         ) : null}
