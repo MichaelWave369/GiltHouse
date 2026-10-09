@@ -126,8 +126,10 @@ test("R17 all four real lobby doors remain accessible from the center aisle", ()
     for (let i = 0; i < 60; i++) pos = advanceLobby3DCamera(pos.x, pos.z, 0, -0.5);
     assert.equal(pos.z, -6.4);
     assert.equal(collidesLobby3DObstacle(pos.x, pos.z), false);
-    const step = station.x > 0 ? 0.5 : -0.5;
-    for (let i = 0; i < 22; i++) pos = advanceLobby3DCamera(pos.x, pos.z, step, 0);
+    for (let i = 0; i < 14 && Math.abs(pos.x - station.x) > 1e-6; i++) {
+      const step = Math.sign(station.x - pos.x) * Math.min(0.5, Math.abs(station.x - pos.x));
+      pos = advanceLobby3DCamera(pos.x, pos.z, step, 0);
+    }
     assert.equal(collidesLobby3DObstacle(pos.x, pos.z), false);
     assert.equal(canEnterLobbyPortal(station.view, pos.x, pos.z), true,
       `R17 must not trap visitor away from ${station.name}, x=${pos.x}, z=${pos.z}`);
