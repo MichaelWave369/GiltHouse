@@ -16,7 +16,7 @@
     "preview:stop": "node scripts/preview.mjs stop",
     "typecheck": "tsc --noEmit",
     "check:auth": "node scripts/check-auth-invariant.mjs",
-    "test": "node --test 'scripts/**/*.test.mjs' && node --experimental-strip-types --test src/lib/app-data/app-data.test.ts src/lib/app-data/readiness-schedule.test.ts src/lib/auth/gate-identity.test.ts src/lib/auth/sign-in-gate.test.ts src/lib/casino/training-lab.test.ts src/lib/world/world.test.ts src/lib/world/agent-sandbox.test.ts src/lib/world/visitor-demo.test.ts src/lib/world/model-proposal.test.ts src/lib/world/lobby3d.test.ts src/lib/casino/floor3d.test.ts",
+    "test": "node --test 'scripts/**/*.test.mjs' && node --experimental-strip-types --test src/lib/app-data/app-data.test.ts src/lib/app-data/readiness-schedule.test.ts src/lib/auth/gate-identity.test.ts src/lib/auth/sign-in-gate.test.ts src/lib/casino/training-lab.test.ts src/lib/world/world.test.ts src/lib/world/agent-sandbox.test.ts src/lib/world/visitor-demo.test.ts src/lib/world/model-proposal.test.ts src/lib/world/lobby3d.test.ts src/lib/casino/floor3d.test.ts src/lib/casino/floor3d-nav.test.ts",
     "lint": "eslint .",
     "format": "prettier --write .",
     "build:pages": "vite build --config pages-static/vite.config.ts",

@@ -54,6 +54,19 @@ try {
     await room.getByRole("button", { name: "AFTER HOURS" }).waitFor({ state: "visible" });
     assert.equal(await room.getByRole("group", { name: "Casino table shortcuts" }).getByRole("button").count(), 8);
 
+    // R14: interactive, accessible floor map is opt-in and never teleports.
+    await room.getByRole("button", { name: "Show floor map" }).click();
+    const map = room.getByRole("complementary", { name: "3D casino floor map" });
+    await map.waitFor({ state: "visible", timeout: 15000 });
+    assert.equal(await map.getByRole("group", { name: "Choose map destination" }).getByRole("button").count(), 8);
+    await map.getByRole("group", { name: "Choose map destination" }).getByRole("button", { name: "THE SHOE" }).click();
+    await map.getByText(/m along the marked walking path/).waitFor({ state: "visible", timeout: 15000 });
+    assert.equal(await map.getByRole("button", { name: "THE SHOE" }).getAttribute("aria-pressed"), "true");
+    assert.equal(await page.evaluate(() => localStorage.getItem("gilt-house-v1")), before,
+      "Simply selecting a walking route must never change the chip purse");
+    await room.getByRole("button", { name: "Hide floor map" }).click();
+    await map.waitFor({ state: "detached" });
+
     // The showroom must not let F teleport from its spawn point.
     await page.keyboard.press("f");
     await room.waitFor({ state: "visible" });

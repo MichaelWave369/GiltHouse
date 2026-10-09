@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import {
   canOpenFloor3DTable,
   advanceFloor3DCamera,
@@ -11,6 +11,8 @@ import {
   type Floor3DPose,
   type FloorGame,
 } from "@/lib/casino/floor3d";
+
+const Floor3DWayfinder = lazy(() => import("@/components/casino/floor-wayfinder").then((m) => ({ default: m.Floor3DWayfinder })));
 
 type Motion = "forward" | "back" | "left" | "right" | "turnLeft" | "turnRight";
 const DIRECTION_BUTTONS: readonly { id: Motion; name: string }[] = [
@@ -40,6 +42,8 @@ export function FloorWalk3D({
   const [nearGame, setNearGame] = useState<FloorGame | null>(null);
   const [notice, setNotice] = useState("");
   const [tableBlocked, setTableBlocked] = useState(false);
+  const [mapOpen, setMapOpen] = useState(false);
+  const [mapTarget, setMapTarget] = useState<FloorGame | null>(null);
   const [cameraLocation, setCameraLocation] = useState(() => safeFloor3DReturnPose(returnPose));
   const [restored] = useState(() => returnPose !== null);
   const [reduced] = useState(() => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
@@ -407,10 +411,17 @@ export function FloorWalk3D({
           <h2 className="font-display text-xl italic">The Gaming Floor</h2>
           {restored ? <p role="status" className="text-xs text-gold">Welcome back. Your 3D position and view were restored.</p> : null}
         </div>
-        <button type="button" onClick={onClose}
-          className="press min-h-11 rounded-full border border-gold px-4 text-sm text-gold">
-          Back to casino directory
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <button type="button" onClick={() => setMapOpen((value) => !value)}
+            aria-expanded={mapOpen} aria-controls="gilt-floor-map"
+            className="press min-h-11 rounded-full border border-gold/70 bg-ink-2 px-4 text-sm text-gold">
+            {mapOpen ? "Hide floor map" : "Show floor map"}
+          </button>
+          <button type="button" onClick={onClose}
+            className="press min-h-11 rounded-full border border-gold px-4 text-sm text-gold">
+            Back to casino directory
+          </button>
+        </div>
       </header>
       <div className="relative min-h-0 flex-1 bg-[#120b14]">
         <canvas ref={canvasRef} className="h-full w-full touch-none"
@@ -419,6 +430,13 @@ export function FloorWalk3D({
           <strong className="text-gold">WASD walk · Q/E turn · F enter nearby table</strong>
           <span className="mt-1 block text-cream-dim">Drag to look around. Tap tables when close, or use the directory below.</span>
         </p>
+        {mapOpen ? (
+          <div id="gilt-floor-map">
+            <Suspense fallback={<p role="status" className="pointer-events-none absolute left-3 top-16 rounded-lg bg-ink p-3 text-xs text-gold">Loading floor map…</p>}>
+              <Floor3DWayfinder pose={cameraLocation} game={mapTarget} onSelect={setMapTarget} onClose={() => setMapOpen(false)} />
+            </Suspense>
+          </div>
+        ) : null}
         {phase === "ready" && near ? (
           <button type="button" onClick={() => onChoose(near.game, latestPose.current)}
             className="press absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full border border-gold bg-ink/95 px-4 py-3 text-sm font-semibold text-gold">
