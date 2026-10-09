@@ -50,7 +50,7 @@ try {
     await room.getByRole("button", { name: "THE SHOE" }).waitFor({ state: "visible" });
     await room.getByRole("button", { name: "THE WHEEL" }).waitFor({ state: "visible" });
     await room.getByRole("button", { name: "AFTER HOURS" }).waitFor({ state: "visible" });
-    assert.equal(await room.locator('section[aria-label="Casino games"] button').count(), 8);
+    assert.equal(await room.getByRole("group", { name: "Casino table shortcuts" }).getByRole("button").count(), 8);
 
     // The showroom must not let F teleport from its spawn point.
     await page.keyboard.press("f");
