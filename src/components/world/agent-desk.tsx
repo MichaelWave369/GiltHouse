@@ -9,6 +9,7 @@ import { NPCS, VIEW_H, VIEW_W } from "@/lib/world/content";
 import { renderFrame } from "@/lib/world/draw";
 import { useWorld } from "@/lib/world/store";
 import { planLocalPatrol } from "@/lib/world/visitor-demo";
+import { ModelProposalDesk } from "@/components/world/model-proposal-desk";
 
 /**
  * Backstage rehearsal runs in an isolated virtual scene.
@@ -194,6 +195,7 @@ export function AgentDesk() {
           </ol>
         )}
       </div>
+      <ModelProposalDesk snapshot={snapshot} />
       <p className="text-xs leading-relaxed text-cream-dim">
         UNVERIFIED_LOCAL_SIMULATION. No model, internet, automatic memory, training,
         user data transfer, saved gameplay changes, game payments, or API expenditure.
