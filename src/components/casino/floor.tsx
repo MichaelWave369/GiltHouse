@@ -1,4 +1,8 @@
+import { lazy, Suspense, useCallback, useState } from "react";
 import { BookOpen, Bot, Cherry, Club, Diamond, Dice5, Dices, Gem, Grid3x3, Radio, Spade } from "lucide-react";
+import type { FloorGame } from "@/lib/casino/floor3d";
+
+const FloorWalk3D = lazy(() => import("@/components/casino/floor-walk3d").then((module) => ({ default: module.FloorWalk3D })));
 import { chips, OPENING_BANK, useCasino, type Ledger } from "@/lib/casino/store";
 import { Bartender } from "@/components/casino/bartender";
 import { BrokeBanner, Frame, TopBar } from "@/components/casino/shell";
@@ -110,6 +114,12 @@ export function Floor() {
   const setView = useCasino((s) => s.setView);
   const ledger = useCasino((s) => s.ledger);
   const resetPurse = useCasino((s) => s.resetPurse);
+  const [show3D, setShow3D] = useState(false);
+  const close3D = useCallback(() => setShow3D(false), []);
+  const choose3D = useCallback((game: FloorGame) => {
+    setShow3D(false);
+    setView(game);
+  }, [setView]);
   const net = ledger.reduce((sum, row) => sum + row.delta, 0);
 
   return (
@@ -118,6 +128,11 @@ export function Floor() {
       <p className="max-w-xl text-base leading-relaxed text-cream-dim">
         The wire is live. The agent field runs soccer, baseball, and football in 3D. Chips stay in this browser and cannot be cashed.
       </p>
+      <button type="button" onClick={() => setShow3D(true)}
+        className="press mt-3 mb-4 w-full rounded-xl border border-gold/60 bg-ink-2 px-5 py-4 text-left text-cream hover:border-gold">
+        <span className="block font-display text-2xl italic text-gold">Explore the 3D gaming floor</span>
+        <span className="mt-1 block text-sm text-cream-dim">Walk past eight Art Deco tables in a Three.js casino, or keep using the classic directory below. The existing games and play chips stay exactly the same.</span>
+      </button>
       <BrokeBanner />
       <Pianist place="bar" />
       <Bartender place="bar" />
@@ -184,6 +199,11 @@ export function Floor() {
           Reset purse to {chips(OPENING_BANK)}
         </button>
       </footer>
+      {show3D ? (
+        <Suspense fallback={<div role="status" className="fixed inset-0 z-50 flex items-center justify-center bg-ink text-gold">Loading the 3D gaming floor…</div>}>
+          <FloorWalk3D onClose={close3D} onChoose={choose3D} />
+        </Suspense>
+      ) : null}
     </Frame>
   );
 }
