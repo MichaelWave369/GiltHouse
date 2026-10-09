@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import {
-  clampLobbyCamera,
   advanceLobby3DCamera,
   collidesLobby3DObstacle,
   LOBBY_STATIONS,
