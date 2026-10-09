@@ -37,3 +37,30 @@ export function clampLobbyCamera(x: number, z: number): { x: number; z: number }
   const safeZ = Number.isFinite(z) ? z : 7;
   return { x: Math.max(-7.4, Math.min(7.4, safeX)), z: Math.max(-6.4, Math.min(8.2, safeZ)) };
 }
+
+/**
+ * R10 physical door proximity. The 3D camera can approach the north wall only
+ * as far as z=-6.4, so an interaction band around the doorway is intentional.
+ * A pure nearest-station selector lets both keyboard and pointer use identical
+ * authorization checks. This is UI navigation, never a wager.
+ */
+export const LOBBY_DOOR_INTERACT_Z = -5.25;
+export const LOBBY_DOOR_HALF_WIDTH = 1.48;
+
+export function nearbyLobbyStation(x: number, z: number): LobbyStation | null {
+  if (!Number.isFinite(x) || !Number.isFinite(z) || z > LOBBY_DOOR_INTERACT_Z) return null;
+  let nearest: LobbyStation | null = null;
+  let distance = Infinity;
+  for (const station of LOBBY_STATIONS) {
+    const dx = Math.abs(station.x - x);
+    if (dx <= LOBBY_DOOR_HALF_WIDTH && dx < distance) {
+      nearest = station;
+      distance = dx;
+    }
+  }
+  return nearest;
+}
+
+export function canEnterLobbyPortal(view: string, x: number, z: number): boolean {
+  return validLobbyStation(view) && nearbyLobbyStation(x, z)?.view === view;
+}
