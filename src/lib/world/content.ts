@@ -309,6 +309,29 @@ export const NPCS: ActorDef[] = [
     }),
   },
   {
+    id: "wick",
+    name: "Wick Candle",
+    title: "Threshold regular",
+    scene: "neon-block",
+    x: doorX("diner"),
+    body: "#f0c27a",
+    hair: "#3a2418",
+    root: "root",
+    nodes: nodes({
+      root: {
+        text: "I'm not the door. The door is the dark rectangle behind me, and it still works. Talk if you want a person. Step through if you want pancakes.",
+        choices: [
+          { id: "why", text: "Why stand in the threshold?", next: "why" },
+          leave("I'll use the door, then."),
+        ],
+      },
+      why: {
+        text: "Because every block needs someone who proves the entrance is not a person. W, or the Door line, gets you into Midnight. E gets me, and I don't serve.",
+        choices: [leave("That's fair.")],
+      },
+    }),
+  },
+  {
     id: "ford",
     name: "Ford Ives",
     title: "Cabbie",
@@ -576,6 +599,12 @@ export const NPCS: ActorDef[] = [
         choices: [
           { id: "menu", text: "What's cooking?", shop: true },
           {
+            id: "usual",
+            text: "The usual.",
+            next: "usual",
+            requireFlag: "tasted:coffee",
+          },
+          {
             id: "tired",
             text: "I'm running on fumes.",
             next: "coffee",
@@ -618,6 +647,10 @@ export const NPCS: ActorDef[] = [
       coffee: {
         text: "She slides a cup you did not pay for. 'Use it before it becomes a personality. The rest of the menu costs tokens, not chips. I don't speak chip.'",
         choices: [leave("Thank you.")],
+      },
+      usual: {
+        text: "Dottie is already pouring. 'Coffee, then. You drank the last one like it owed you rent. This one still costs tokens if you want it from the menu. I just like that you remembered the order.'",
+        choices: [{ id: "menu", text: "Then I'll buy one.", shop: true }, leave("That's the one.")],
       },
       errand: {
         text: "Harvey has a record called Griddle Jazz and he is holding it hostage because he thinks I called his trumpet bin 'seasoning.' Ten tokens so you can afford the thing. Bring it home.",
@@ -1020,6 +1053,7 @@ export const NPCS: ActorDef[] = [
             effects: [
               { op: "quest", id: "q-signal", status: "complete", step: 3 },
               { op: "flag", key: "signal:known", value: true },
+              { op: "flag", key: "chapter:one", value: true },
               { op: "knowledge", n: 1 },
               { op: "tokens", n: 20 },
               { op: "item", id: "gilt-pin", n: 1 },

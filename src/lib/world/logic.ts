@@ -156,39 +156,50 @@ function distance(a: number, b: number): number {
   return Math.abs(a - b);
 }
 
-export function lookAt(state: WorldState): Look | null {
-  let bestNpc: { id: string; name: string; d: number } | null = null;
+export type Aim = "act" | "door";
+
+/** Pick one nearby target without letting a person erase a door, or a door erase a person. */
+export function selectLook(looks: Look[], aim: Aim): Look | null {
+  if (aim === "door") return looks.find((look) => look.kind === "door") ?? null;
+  return (
+    looks.find((look) => look.kind === "talk") ??
+    looks.find((look) => look.kind === "hot") ??
+    looks.find((look) => look.kind === "door") ??
+    null
+  );
+}
+
+export function targetsInRange(state: WorldState): Look[] {
+  const ranked: { look: Look; d: number }[] = [];
   for (const npc of NPCS) {
     if (npc.scene !== state.scene) continue;
     const x = npcX(npc.id, state.worldTime, npc.x, npc.wander);
     const d = distance(x, state.x);
-    if (d <= TALK_R && (!bestNpc || d < bestNpc.d)) bestNpc = { id: npc.id, name: npc.name, d };
+    if (d <= TALK_R) ranked.push({ look: { kind: "talk", id: npc.id, name: npc.name, label: `Talk to ${npc.name}` }, d });
   }
-  if (bestNpc) return { kind: "talk", id: bestNpc.id, name: bestNpc.name, label: `Talk to ${bestNpc.name}` };
-
-  let bestHot: { id: string; label: string; d: number } | null = null;
   for (const hot of HOTSPOTS) {
     if (hot.scene !== state.scene) continue;
     const d = distance(hot.x, state.x);
-    if (d <= HOT_R && (!bestHot || d < bestHot.d)) bestHot = { id: hot.id, label: hot.label, d };
+    if (d > HOT_R) continue;
+    const verb = hot.kind === "arcade" ? "Play" : hot.kind === "sign" ? "Read" : "Look at";
+    ranked.push({ look: { kind: "hot", id: hot.id, label: `${verb} ${hot.label}` }, d });
   }
-  if (bestHot) {
-    const hot = HOTSPOTS.find((row) => row.id === bestHot?.id);
-    const verb = hot?.kind === "arcade" ? "Play" : hot?.kind === "sign" ? "Read" : "Look at";
-    return { kind: "hot", id: bestHot.id, label: `${verb} ${bestHot.label}` };
-  }
-
-  let bestDoor: { id: string; label: string; d: number } | null = null;
   for (const portal of PORTALS) {
     if (portal.scene !== state.scene) continue;
     const d = distance(portal.x, state.x);
-    if (d <= DOOR_R && (!bestDoor || d < bestDoor.d)) bestDoor = { id: portal.id, label: portal.label, d };
+    if (d > DOOR_R) continue;
+    const entering = portal.label.startsWith("To the");
+    ranked.push({
+      look: { kind: "door", id: portal.id, label: entering ? portal.label : `Enter ${portal.label}` },
+      d,
+    });
   }
-  if (bestDoor) {
-    const entering = bestDoor.label.startsWith("To the");
-    return { kind: "door", id: bestDoor.id, label: entering ? bestDoor.label : `Enter ${bestDoor.label}` };
-  }
-  return null;
+  ranked.sort((a, b) => a.d - b.d || a.look.kind.localeCompare(b.look.kind));
+  return ranked.map((row) => row.look);
+}
+
+export function lookAt(state: WorldState, aim: Aim = "act"): Look | null {
+  return selectLook(targetsInRange(state), aim);
 }
 
 function enterScene(state: WorldState, scene: SceneId, x: number): WorldState {
@@ -246,8 +257,8 @@ function readRadio(state: WorldState): InteractResult {
   };
 }
 
-export function interact(state: WorldState): InteractResult {
-  const look = lookAt(state);
+export function interact(state: WorldState, aim: Aim = "act"): InteractResult {
+  const look = lookAt(state, aim);
   if (!look) return { state, action: { type: "none" } };
   if (look.kind === "talk") {
     const npc = actorById(look.id);
@@ -355,7 +366,12 @@ export function useItem(state: WorldState, itemId: string): ShopResult {
   if ((state.inventory[itemId] ?? 0) < 1) return { state, ok: false, reason: "You don't have that." };
   if (item.use.flag && state.flags[item.use.flag]) return { state, ok: false, reason: "You already got what that had." };
   let next = state;
-  if (item.kind === "food") next = applyEffects(next, [{ op: "take", id: itemId, n: 1 }]);
+  if (item.kind === "food") {
+    next = applyEffects(next, [
+      { op: "take", id: itemId, n: 1 },
+      { op: "flag", key: `tasted:${itemId}`, value: true },
+    ]);
+  }
   const effects: Effect[] = [];
   if (item.use.energy) effects.push({ op: "energy", n: item.use.energy });
   if (item.use.charm) effects.push({ op: "charm", n: item.use.charm });
@@ -407,6 +423,12 @@ export function grantArcade(
   score: number,
   total: number,
 ): { state: WorldState; message: string } {
+  if (game !== "pulse" && game !== "memory") {
+    return { state, message: "That cabinet is not on this block." };
+  }
+  if (!Number.isFinite(score) || !Number.isFinite(total) || total <= 0 || score < 0 || score > total) {
+    return { state, message: "The cabinet ignores a score it did not deal." };
+  }
   const success = score >= Math.ceil(total * 0.6);
   const at = `arcade:${game}:at`;
   const clears = `arcade:${game}:clears`;

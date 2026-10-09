@@ -110,10 +110,11 @@ function drawStreet(ctx: CanvasRenderingContext2D, world: WorldState, cam: numbe
       body: actor.npc.body,
       hair: actor.npc.hair,
       hat: actor.npc.hat ?? false,
-      facing: 1,
+      facing: actor.x < world.x ? 1 : -1,
       frame: opts.reduced ? 0 : Math.floor(opts.time * 2 + actor.npc.x) % 4,
       walking: Boolean(actor.npc.wander) && !opts.reduced,
       appearance: null,
+      cue: cueFor(actor.npc.id),
     });
   }
 
@@ -292,10 +293,11 @@ function drawInterior(ctx: CanvasRenderingContext2D, world: WorldState, cam: num
       body: npc.body,
       hair: npc.hair,
       hat: npc.hat ?? false,
-      facing: -1,
-      frame: 0,
+      facing: npc.x < world.x ? 1 : -1,
+      frame: opts.reduced ? 0 : Math.floor(opts.time * 1.5) % 4,
       walking: false,
       appearance: null,
+      cue: cueFor(npc.id),
     });
   }
   drawPerson(ctx, world.x - cam, world.y, {
@@ -327,24 +329,35 @@ type PersonOpts = {
   frame: number;
   walking: boolean;
   appearance: Appearance | null;
+  cue?: "apron" | "phones" | "coat" | "spark";
 };
+
+function cueFor(id: string): PersonOpts["cue"] {
+  if (id === "dottie") return "apron";
+  if (id === "ruby" || id === "switch") return "phones";
+  if (id === "gus" || id === "sable" || id === "luckless" || id === "ivo") return "coat";
+  if (id === "kit") return "spark";
+  return undefined;
+}
 
 function drawPerson(ctx: CanvasRenderingContext2D, x: number, feet: number, person: PersonOpts) {
   ctx.save();
   ctx.translate(Math.round(x), Math.round(feet));
   ctx.scale(person.facing, 1);
-  const bob = person.walking ? (person.frame % 2 === 0 ? -1 : 0) : 0;
+  const step = person.frame % 4;
+  const bob = person.walking ? [0, -1, -2, -1][step] ?? 0 : step === 2 ? -1 : 0;
   ctx.translate(0, bob);
   rect(ctx, -5, -2, 10, 3, "rgba(0,0,0,0.35)");
-  const leg = person.walking ? (person.frame % 2 === 0 ? 2 : -2) : 0;
+  const left = person.walking ? [3, 1, -3, -1][step] ?? 0 : 0;
+  const right = person.walking ? [-3, -1, 3, 1][step] ?? 0 : 0;
   const shoe = person.appearance?.shoes === "two-tone" ? CREAM : "#16120f";
-  rect(ctx, -4, -10, 3, 8 + (leg > 0 ? 0 : 0), "#2a241c");
-  rect(ctx, 1, -10, 3, 8, "#2a241c");
-  rect(ctx, -5, -4 + leg, 4, 3, shoe);
-  rect(ctx, 1, -4 - leg, 4, 3, shoe);
+  rect(ctx, -4, -12, 3, 8, "#2a241c");
+  rect(ctx, 1, -12, 3, 8, "#2a241c");
+  rect(ctx, -5 + left, -5, 4, 3, shoe);
+  rect(ctx, 1 + right, -5, 4, 3, shoe);
   if (person.appearance?.shoes === "two-tone") {
-    rect(ctx, -5, -3 + leg, 4, 1, "#16120f");
-    rect(ctx, 1, -3 - leg, 4, 1, "#16120f");
+    rect(ctx, -5 + left, -4, 4, 1, "#16120f");
+    rect(ctx, 1 + right, -4, 4, 1, "#16120f");
   }
   const cloth = person.appearance ? PALETTE[person.appearance.palette].cloth : person.body;
   if (person.appearance?.outfit === "dress") {
@@ -360,6 +373,14 @@ function drawPerson(ctx: CanvasRenderingContext2D, x: number, feet: number, pers
     rect(ctx, -6, -21, 12, 10, color);
     rect(ctx, -6, -16, 2, 6, color);
     rect(ctx, 4, -16, 2, 6, color);
+  } else if (person.cue === "coat") {
+    rect(ctx, -6, -21, 12, 9, "#1a120e");
+    rect(ctx, -6, -16, 2, 5, "#1a120e");
+    rect(ctx, 4, -16, 2, 5, "#1a120e");
+  }
+  if (person.cue === "apron") {
+    rect(ctx, -4, -18, 8, 8, "#f4ead2");
+    rect(ctx, -1, -18, 2, 8, "#d7c4a4");
   }
   rect(ctx, -3, -28, 6, 8, SKIN);
   rect(ctx, -3, -22, 6, 2, SKIN_SHADOW);
@@ -381,10 +402,16 @@ function drawPerson(ctx: CanvasRenderingContext2D, x: number, feet: number, pers
     rect(ctx, -5, -33, 10, 2, "#1a120e");
     rect(ctx, -3, -36, 6, 3, "#1a120e");
   }
-  if (person.appearance?.accessory === "shades") rect(ctx, -3, -26, 6, 2, "#111");
+  if (person.appearance?.accessory === "shades" || person.cue === "phones") rect(ctx, -3, -26, 6, 2, "#111");
+  if (person.cue === "phones") {
+    rect(ctx, -5, -26, 2, 3, GOLD);
+    rect(ctx, 3, -26, 2, 3, GOLD);
+  }
   if (person.appearance?.accessory === "earring") rect(ctx, 3, -24, 1, 2, PINK);
   if (person.appearance?.pin) rect(ctx, 1, -18, 2, 2, GOLD);
-  rect(ctx, -7, -18, 2, 6, SKIN);
+  if (person.cue === "spark") rect(ctx, 5, -30, 2, 2, step % 2 === 0 ? GOLD : PINK);
+  const arm = person.cue === "spark" && !person.walking && step === 0 ? -22 : -18;
+  rect(ctx, -7, arm, 2, 6, SKIN);
   rect(ctx, 5, -18, 2, 6, SKIN);
   ctx.restore();
 }

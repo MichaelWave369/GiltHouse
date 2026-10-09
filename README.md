@@ -6,9 +6,9 @@ Gilt House is a standalone supper-club of **play chips** plus a walkable fiction
 
 Open the app. Pick a look, then walk the sidewalk.
 
-- **A / D** or **Left / Right** move. On a phone, use the Left, Act, and Right buttons.
-- **W**, **E**, or **Enter** talks, reads a sign, or uses a door. **Act** does the same on touch.
-- **Esc** closes the open panel, then opens the menu.
+- **A / D** or **Left / Right** move. On a phone, use Left, Act, Door, and Right. Door appears when an entrance is close.
+- **E** or **Act** talks, reads, or plays. **W** uses a door. If someone is standing in the doorway, both lines show.
+- **Esc** closes the open panel, then opens the menu. The title and the character creator ignore Esc on purpose.
 - **The Floor** jumps straight to the classic casino: blackjack, roulette, craps, baccarat, poker, slots, keno, the wire, the Pit, the Training Lab, and the agent arena.
 - The grand door on **Gilt House** enters the lobby first. From there you can still reach every table.
 

@@ -9,6 +9,7 @@ const COLORS = [
 
 export function PulseGame({ onDone, onClose }: { onDone: (score: number, total: number) => void; onClose: () => void }) {
   const total = 8;
+  const [armed, setArmed] = useState(false);
   const [beat, setBeat] = useState(0);
   const [hits, setHits] = useState(0);
   const [pos, setPos] = useState(0);
@@ -16,8 +17,16 @@ export function PulseGame({ onDone, onClose }: { onDone: (score: number, total: 
   const hitsRef = useRef(0);
   const done = useRef(false);
   const start = useRef(0);
+  const finishTimer = useRef<number | null>(null);
 
   useEffect(() => {
+    return () => {
+      if (finishTimer.current != null) window.clearTimeout(finishTimer.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!armed) return;
     start.current = performance.now();
     let frame = 0;
     const loop = (now: number) => {
@@ -28,10 +37,10 @@ export function PulseGame({ onDone, onClose }: { onDone: (score: number, total: 
     };
     frame = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(frame);
-  }, []);
+  }, [armed]);
 
   function strike() {
-    if (done.current || beat >= total) return;
+    if (!armed || done.current || beat >= total) return;
     const good = pos > 0.4 && pos < 0.6;
     const nextHits = hitsRef.current + (good ? 1 : 0);
     hitsRef.current = nextHits;
@@ -41,8 +50,25 @@ export function PulseGame({ onDone, onClose }: { onDone: (score: number, total: 
     setBeat(nextBeat);
     if (nextBeat >= total) {
       done.current = true;
-      window.setTimeout(() => onDone(nextHits, total), 450);
+      finishTimer.current = window.setTimeout(() => onDone(nextHits, total), 450);
     }
+  }
+
+  if (!armed) {
+    return (
+      <div className="flex flex-col gap-3">
+        <h3 className="font-display text-2xl text-cream italic">Pulse Line</h3>
+        <p className="text-sm text-cream-dim">Eight beats. Catch the sweep inside the gold window. A good set pays street tokens. It never pays chips.</p>
+        <div className="flex gap-2">
+          <button type="button" className="press h-12 flex-1 rounded-full bg-gold font-medium text-ink" onClick={() => setArmed(true)}>
+            Start
+          </button>
+          <button type="button" className="press h-12 rounded-full border border-line px-4 text-cream" onClick={onClose}>
+            Leave
+          </button>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -75,6 +101,7 @@ export function PulseGame({ onDone, onClose }: { onDone: (score: number, total: 
 
 export function MemoryGame({ onDone, onClose }: { onDone: (score: number, total: number) => void; onClose: () => void }) {
   const total = 3;
+  const [armed, setArmed] = useState(false);
   const [round, setRound] = useState(0);
   const [phase, setPhase] = useState<"show" | "input">("show");
   const [lit, setLit] = useState<number | null>(null);
@@ -84,6 +111,7 @@ export function MemoryGame({ onDone, onClose }: { onDone: (score: number, total:
   const done = useRef(false);
 
   useEffect(() => {
+    if (!armed) return;
     if (sequences.current.length === 0) {
       let seed = 369;
       sequences.current = [0, 1, 2].map((roundIndex) => {
@@ -115,7 +143,24 @@ export function MemoryGame({ onDone, onClose }: { onDone: (score: number, total:
       cancelled = true;
       window.clearInterval(timer);
     };
-  }, [round]);
+  }, [round, armed]);
+
+  if (!armed) {
+    return (
+      <div className="flex flex-col gap-3">
+        <h3 className="font-display text-2xl text-cream italic">Marquee Memory</h3>
+        <p className="text-sm text-cream-dim">Three rounds. Watch the bulbs, then repeat them. A miss ends the set. Tokens only, and only if the cabinet says so.</p>
+        <div className="flex gap-2">
+          <button type="button" className="press h-12 flex-1 rounded-full bg-gold font-medium text-ink" onClick={() => setArmed(true)}>
+            Start
+          </button>
+          <button type="button" className="press h-12 rounded-full border border-line px-4 text-cream" onClick={onClose}>
+            Leave
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   function pick(index: number) {
     if (phase !== "input" || done.current) return;

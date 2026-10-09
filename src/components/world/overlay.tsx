@@ -26,7 +26,9 @@ export function WorldOverlay() {
   const arcade = useWorld((s) => s.arcade);
   const toast = useWorld((s) => s.toast);
   const recovered = useWorld((s) => s.recovered);
-  const look = lookAt(world);
+  const look = lookAt(world, "act");
+  const door = lookAt(world, "door");
+  const both = Boolean(look && door && look.kind !== "door");
   const objective = currentObjective(world);
   const place = LOCATIONS[world.scene].name;
 
@@ -78,25 +80,41 @@ export function WorldOverlay() {
           </p>
         ) : null}
         {look && panel === "none" && !talk && !arcade ? (
-          <button
-            type="button"
-            className="pointer-events-auto press w-fit rounded-full border border-gold bg-ink px-4 py-2 text-sm text-gold"
-            onClick={() => {
-              unlockAudio();
-              playStreetCue("talk", !world.prefs.mute);
-              useWorld.getState().interact();
-            }}
-          >
-            E · {look.label}
-          </button>
+          <div className="pointer-events-auto flex flex-wrap gap-2">
+            <button
+              type="button"
+              className="press w-fit rounded-full border border-gold bg-ink px-4 py-2 text-sm text-gold"
+              onClick={() => {
+                unlockAudio();
+                playStreetCue("talk", !world.prefs.mute);
+                useWorld.getState().interact("act");
+              }}
+            >
+              E · {look.label}
+            </button>
+            {both && door ? (
+              <button
+                type="button"
+                className="press w-fit rounded-full border border-cream/40 bg-ink px-4 py-2 text-sm text-cream"
+                onClick={() => {
+                  unlockAudio();
+                  useWorld.getState().interact("door");
+                }}
+              >
+                W · {door.label}
+              </button>
+            ) : null}
+          </div>
         ) : null}
         <p className="pointer-events-none hidden text-[0.7rem] tracking-wide text-cream-dim sm:block">
-          A D move · W or E act · Esc menu · tokens are not chips · chips are not cash
+          A D move · E talks or plays · W uses a door · Esc menu · tokens are not chips
         </p>
       </div>
 
+      {panel === "title" ? <Title /> : null}
       {panel === "create" ? <Creator /> : null}
       {panel === "intro" ? <Intro /> : null}
+      {panel === "chapter" ? <Chapter /> : null}
       {panel === "pause" ? <Pause /> : null}
       {panel === "inventory" ? <Inventory /> : null}
       {panel === "journal" ? <Journal /> : null}
@@ -204,6 +222,92 @@ function Creator() {
         Step onto the block
       </button>
     </Sheet>
+  );
+}
+
+function Title() {
+  const created = useWorld((s) => s.world.flags.created === true);
+  const prefs = useWorld((s) => s.world.prefs);
+  const setPrefs = useWorld((s) => s.setPrefs);
+  const [confirmNew, setConfirmNew] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
+  return (
+    <div className="pointer-events-auto absolute inset-0 flex items-end justify-center bg-ink/80 p-3 sm:items-center" role="dialog" aria-modal="true" aria-label="Gilt House title">
+      <div className="max-h-[92%] w-full max-w-lg overflow-y-auto rounded-2xl border border-gold/50 bg-ink-2 p-5 text-cream shadow-2xl">
+        <p className="text-[0.7rem] tracking-[0.28em] text-gold uppercase">Gilt House</p>
+        <h2 className="font-display text-4xl leading-none text-cream italic">The Neon Block</h2>
+        <p className="mt-2 text-sm text-cream-dim">The night is young. The odds aren't.</p>
+        <p className="mt-3 text-sm leading-relaxed text-cream-dim">
+          Play chips and street tokens are free entertainment. They are not cash, not crypto, and not each other. This is not a paid city app.
+        </p>
+        <div className="mt-4 grid gap-2">
+          {created ? (
+            <button type="button" className="press h-12 rounded-full bg-gold font-medium text-ink" onClick={() => useWorld.getState().continueNight()}>
+              Continue
+            </button>
+          ) : (
+            <button type="button" className="press h-12 rounded-full bg-gold font-medium text-ink" onClick={() => useWorld.getState().continueNight()}>
+              New Game
+            </button>
+          )}
+          {created ? (
+            confirmNew ? (
+              <button type="button" className="press h-12 rounded-full border border-oxblood text-gold" onClick={() => useWorld.getState().beginNewGame()}>
+                Confirm new walk — chips stay
+              </button>
+            ) : (
+              <button type="button" className="press h-12 rounded-full border border-line" onClick={() => setConfirmNew(true)}>
+                New Game
+              </button>
+            )
+          ) : null}
+          <button type="button" className="press h-12 rounded-full border border-line" onClick={() => useWorld.getState().enterCasino("floor")}>
+            Quick casino access
+          </button>
+          <button type="button" className="press h-11 rounded-full border border-line text-sm" onClick={() => setShowHelp((open) => !open)}>
+            {showHelp ? "Hide controls" : "Controls"}
+          </button>
+        </div>
+        {showHelp ? (
+          <ul className="mt-3 space-y-1 text-sm text-cream-dim">
+            <li>A and D, or the arrows, walk the sidewalk.</li>
+            <li>E talks, reads, or plays. W uses a door when one is close.</li>
+            <li>On a phone, Left, Act, Door, and Right do the same.</li>
+            <li>Esc closes a panel, then opens the menu.</li>
+          </ul>
+        ) : null}
+        <div className="mt-4 space-y-2 text-sm">
+          <label className="block">
+            Music
+            <input className="mt-1 w-full accent-gold" type="range" min={0} max={100} value={Math.round(prefs.music * 100)} onChange={(event) => setPrefs({ music: Number(event.target.value) / 100 })} />
+          </label>
+          <button type="button" className="press h-10 w-full rounded-full border border-line" aria-pressed={prefs.mute} onClick={() => setPrefs({ mute: !prefs.mute })}>
+            {prefs.mute ? "Sound is muted" : "Mute"}
+          </button>
+          <button type="button" className="press h-10 w-full rounded-full border border-line" aria-pressed={prefs.reduced} onClick={() => setPrefs({ reduced: !prefs.reduced })}>
+            {prefs.reduced ? "Softer motion is on" : "Soften motion"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Chapter() {
+  return (
+    <div className="pointer-events-auto absolute inset-0 flex items-end justify-center bg-ink/75 p-3 sm:items-center" role="dialog" aria-modal="true" aria-label="Chapter complete">
+      <div className="w-full max-w-lg rounded-2xl border border-gold/60 bg-ink-2 p-5 text-cream">
+        <p className="text-[0.7rem] tracking-[0.22em] text-gold uppercase">Chapter one</p>
+        <h2 className="font-display text-3xl text-cream italic">Still open</h2>
+        <p className="mt-3 text-sm leading-relaxed">
+          The count was never a jackpot. Mara Gilt left the marquees stuttering so the night shift would look up together. You heard it. The pin doesn't spend. The doors do.
+        </p>
+        <p className="mt-2 text-sm text-cream-dim">The block is still walkable. The house is still awake. Nothing here became money.</p>
+        <button type="button" className="press mt-4 h-12 w-full rounded-full bg-gold font-medium text-ink" onClick={() => useWorld.getState().dismissChapter()}>
+          Keep walking
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -377,7 +481,7 @@ function Help() {
     <Sheet title="How the night works">
       <ul className="space-y-2 text-sm leading-relaxed text-cream">
         <li>Move with A and D, or the arrows. On a phone, use Left and Right.</li>
-        <li>W, E, Enter, or Act talks, reads a sign, or opens a door.</li>
+        <li>E talks, reads a sign, or starts a cabinet. W uses a door. If both are close, both lines show.</li>
         <li>Street tokens come from errands and arcade skill. They buy the block.</li>
         <li>Gilt House chips are a separate toy purse. They cannot be cashed, moved, or traded for tokens.</li>
         <li>The Floor button jumps to the classic casino. The lobby door does the same, more slowly, on purpose.</li>

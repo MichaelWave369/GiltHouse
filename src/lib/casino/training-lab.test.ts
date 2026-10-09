@@ -70,7 +70,7 @@ test("exported receipt is non-authoritative and includes no money or identity", 
   assert.equal(receipt.score.correct, TRAINING_COUNT);
   assert.equal(receipt.attempts.length, TRAINING_COUNT);
   assert.ok(Object.values(receipt.authority).every((flag) => flag === false));
-  assert.doesNotMatch(JSON.stringify(receipt), /neon royal|city369|license|api_key|customerId|userId|\\\"(?:cash|chips|balance|wager|token)\\\"/i);
+  assert.doesNotMatch(JSON.stringify(receipt), /neon royal|city369|license|api_key|customerId|userId|"(?:cash|chips|balance|wager|token)"/i);
   assert.throws(
     () => makeTrainingReceipt({ seed: 369, answers: answers(369, true), completedAt: "invalid" }),
     /completedAt/,

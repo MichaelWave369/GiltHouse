@@ -187,7 +187,7 @@ function stepBaseball(match: AgentMatch, home: Club, away: Club, rand: () => num
   let homeScore = match.homeScore;
   let awayScore = match.awayScore;
   let log = match.log;
-  let ballX = (rand() - 0.5) * 0.8;
+  const ballX = (rand() - 0.5) * 0.8;
   let ballZ = 0.2 + rand() * 0.5;
   let ballY = 0.4;
   if (roll < outRate) {

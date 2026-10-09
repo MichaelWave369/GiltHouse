@@ -1,17 +1,19 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-import { doorX, ENCOUNTERS, HOTSPOTS } from "./content.ts";
+import { doorX, ENCOUNTERS, HOTSPOTS, PORTALS } from "./content.ts";
 import { reviewAgentAction } from "./agent.ts";
 import {
   auditContent,
   equipItem,
   grantArcade,
   interact,
+  lookAt,
   maybeEncounter,
   movePlayer,
   pickChoice,
   purchase,
+  selectLook,
   useItem,
 } from "./logic.ts";
 import { CHIP_SAVE_KEY, WORLD_SAVE_KEY, defaultWorld, loadWorld, parseSave, saveWorld, type KeyValueStore } from "./save.ts";
@@ -33,15 +35,42 @@ test("side-scroll A moves left and collision stops a body", () => {
   assert.equal(blocked.x, 241);
 });
 
-test("diner door enters and the exit returns to that sidewalk", () => {
+test("diner door stays open even when Wick is standing on it", () => {
   const atDoor = { ...defaultWorld(), x: doorX("diner") };
-  const entered = interact(atDoor);
-  assert.equal(entered.action.type, "toast");
+  const talked = interact(atDoor, "act");
+  assert.equal(talked.action.type, "dialogue");
+  if (talked.action.type === "dialogue") assert.equal(talked.action.id, "wick");
+  assert.equal(talked.state.scene, "neon-block");
+  const entered = interact(atDoor, "door");
   assert.equal(entered.state.scene, "diner");
   assert.equal(entered.state.flags["been:diner"], true);
-  const left = interact({ ...entered.state, x: 28 });
+  const left = interact({ ...entered.state, x: 28 }, "door");
   assert.equal(left.state.scene, "neon-block");
   assert.equal(left.state.x, doorX("diner"));
+});
+
+test("talk and enter stay distinct when both are in range", () => {
+  const talk = { kind: "talk" as const, id: "wick", name: "Wick Candle", label: "Talk to Wick Candle" };
+  const door = { kind: "door" as const, id: "door-diner", label: "Enter Midnight Diner" };
+  assert.equal(selectLook([talk, door], "act")?.kind, "talk");
+  assert.equal(selectLook([talk, door], "door")?.kind, "door");
+  assert.equal(selectLook([door], "act")?.kind, "door");
+  assert.equal(selectLook([talk], "door"), null);
+  const atDoor = { ...defaultWorld(), x: doorX("diner") };
+  assert.equal(lookAt(atDoor, "act")?.kind, "talk");
+  assert.equal(lookAt(atDoor, "door")?.kind, "door");
+});
+
+test("every street door enters its room and the exit returns", () => {
+  const streetDoors = PORTALS.filter((portal) => portal.scene === "neon-block" && portal.to);
+  assert.ok(streetDoors.length >= 11);
+  for (const portal of streetDoors) {
+    const entered = interact({ ...defaultWorld(), x: portal.x }, "door");
+    assert.equal(entered.state.scene, portal.to, portal.id);
+    const back = interact({ ...entered.state, x: 28 }, "door");
+    assert.equal(back.state.scene, "neon-block");
+    assert.equal(back.state.x, portal.x);
+  }
 });
 
 test("street purchases never touch a chip balance", () => {
@@ -92,6 +121,33 @@ test("arrival, marquees, and arcade rewards progress without chips", () => {
   const cooled = grantArcade(paid.state, "pulse", 8, 8);
   assert.match(cooled.message, /minute/);
   assert.equal(cooled.state.tokens, paid.state.tokens);
+  const forged = grantArcade({ ...state, worldTime: 400 }, "pulse", 99, 8);
+  assert.equal(forged.state.tokens, state.tokens);
+  const again = grantArcade({ ...paid.state, worldTime: paid.state.worldTime + 21 }, "pulse", 8, 8);
+  assert.equal(again.state.tokens, paid.state.tokens + 4);
+});
+
+test("the midnight signal can be finished without a casino win", () => {
+  let state = pickChoice(defaultWorld(), "npc", "kit", "root", "job").state;
+  for (const id of ["sign:diner", "sign:gilt", "sign:mirage"]) {
+    const spot = HOTSPOTS.find((hot) => hot.id === id);
+    assert.ok(spot);
+    state = interact({ ...state, scene: "neon-block", x: spot!.x }, "act").state;
+  }
+  state = pickChoice(state, "npc", "ruby", "root", "heard").state;
+  assert.equal(state.flags["ruby:heard"], true);
+  const radio = HOTSPOTS.find((hot) => hot.id === "radio");
+  assert.ok(radio);
+  state = interact({ ...state, scene: "records", x: radio!.x }, "act").state;
+  assert.equal(state.quests["q-signal"]?.status, "active");
+  state = pickChoice(state, "npc", "switch", "root", "count").state;
+  state = pickChoice(state, "npc", "luckless", "root", "signal").state;
+  const done = pickChoice(state, "npc", "ivo", "root", "signal");
+  assert.equal(done.state.quests["q-signal"]?.status, "complete");
+  assert.equal(done.state.flags["chapter:one"], true);
+  assert.equal(done.state.inventory["gilt-pin"], 1);
+  assert.ok(done.state.tokens > state.tokens);
+  assert.equal("bank" in done.state, false);
 });
 
 test("encounters respect cooldown and one-time flags", () => {
@@ -147,15 +203,42 @@ test("world saves migrate, reject corruption, and never write the chip key", asy
   assert.equal(messy.state.tokens, 11);
   const loaded = loadWorld(storage);
   assert.equal(loaded.state.scene, "neon-block");
+  const chips = new Map<string, string>([[CHIP_SAVE_KEY, "{\"bank\":2500}"]]);
+  const failing: KeyValueStore = {
+    getItem: (key) => chips.get(key) ?? null,
+    setItem: () => {
+      throw new Error("storage blocked");
+    },
+  };
+  assert.throws(() => saveWorld(failing, defaultWorld()));
+  assert.equal(chips.get(CHIP_SAVE_KEY), "{\"bank\":2500}");
+  assert.equal(chips.has(WORLD_SAVE_KEY), false);
 });
 
-test("remote agents cannot act and local scripts cannot wager", () => {
-  const remote = reviewAgentAction({ type: "talk" }, "remote");
+test("remote agents cannot act and local scripts must be well formed", () => {
+  const remote = reviewAgentAction({ type: "talk", npcId: "kit" }, "remote");
   assert.equal(remote.allowed, false);
   const wager = reviewAgentAction({ type: "wager" }, "local-script");
   assert.equal(wager.allowed, false);
-  const local = reviewAgentAction({ type: "move" }, "local-script");
+  const missingDir = reviewAgentAction({ type: "move" }, "local-script");
+  assert.equal(missingDir.allowed, false);
+  const badDir = reviewAgentAction({ type: "move", dir: "left" }, "local-script");
+  assert.equal(badDir.allowed, false);
+  const local = reviewAgentAction({ type: "move", dir: -1 }, "local-script");
   assert.equal(local.allowed, true);
+  if (local.allowed && local.action.type === "move") assert.equal(local.action.dir, -1);
+  const ghost = reviewAgentAction({ type: "talk", npcId: "not-a-person" }, "local-script");
+  assert.equal(ghost.allowed, false);
+  const talk = reviewAgentAction({ type: "talk", npcId: "kit" }, "local-script");
+  assert.equal(talk.allowed, true);
+  const emote = reviewAgentAction({ type: "emote", npcId: "kit", emote: "wave" }, "local-script");
+  assert.equal(emote.allowed, true);
+  const weird = reviewAgentAction({ type: "emote", npcId: "kit", emote: "hack" }, "local-script");
+  assert.equal(weird.allowed, false);
+  const privileged = reviewAgentAction({ type: "move", dir: 1, wager: true }, "local-script");
+  assert.equal(privileged.allowed, false);
+  const outsider = reviewAgentAction({ type: "move", dir: 1 }, "phibot");
+  assert.equal(outsider.allowed, false);
 });
 
 test("existing casino routes remain mounted in the floor and the app", async () => {

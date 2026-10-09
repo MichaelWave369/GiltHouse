@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { playStreetCue, setBlockMusic, setBlockVariant, setLounge, setStreetMix, unlockAudio } from "@/lib/casino/audio";
 import { renderFrame, VIEW_H, VIEW_W } from "@/lib/world/draw";
+import { lookAt } from "@/lib/world/logic";
 import { useWorld } from "@/lib/world/store";
 import { WorldOverlay } from "@/components/world/overlay";
 
@@ -21,6 +22,9 @@ export function NeonStage() {
   const keys = useRef(new Set<string>());
   const boot = useWorld((s) => s.boot);
   const world = useWorld((s) => s.world);
+  const panel = useWorld((s) => s.panel);
+  const talk = useWorld((s) => s.talk);
+  const arcade = useWorld((s) => s.arcade);
   const prefs = world.prefs;
   const jukebox = world.jukebox;
 
@@ -39,34 +43,40 @@ export function NeonStage() {
 
   useEffect(() => {
     const down = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      const typing = Boolean(target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable));
+      const gameKey = ["KeyA", "KeyD", "KeyW", "KeyE", "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Space"].includes(event.code);
+      if (!typing && gameKey) event.preventDefault();
       unlockAudio();
       if (event.repeat) return;
       keys.current.add(event.code);
+      const state = useWorld.getState();
       if (event.code === "Escape") {
-        const state = useWorld.getState();
         if (state.arcade) state.closeArcade();
         else if (state.talk) state.closeTalk();
-        else if (state.panel === "create") return;
+        else if (state.panel === "create" || state.panel === "title") return;
         else if (state.panel === "intro") state.dismissIntro();
+        else if (state.panel === "chapter") state.dismissChapter();
         else if (state.panel !== "none") state.closePanel();
         else state.openPanel("pause");
       }
       if (event.code === "KeyE" || event.code === "Enter") {
-        const state = useWorld.getState();
-        if (!state.talk && !state.arcade) state.interact();
+        if (!state.talk && !state.arcade) state.interact("act");
       }
       if (event.code === "KeyW" || event.code === "ArrowUp") {
-        const state = useWorld.getState();
-        if (!state.talk && !state.arcade && state.panel === "none") state.interact();
+        if (!state.talk && !state.arcade && (state.panel === "none" || state.panel === "intro")) state.interact("door");
       }
     };
     const up = (event: KeyboardEvent) => keys.current.delete(event.code);
-    const blur = () => keys.current.clear();
+    const release = () => keys.current.clear();
     window.addEventListener("keydown", down);
     window.addEventListener("keyup", up);
-    window.addEventListener("blur", blur);
+    window.addEventListener("blur", release);
     const onHide = () => {
-      if (document.visibilityState === "hidden") useWorld.getState().save();
+      if (document.visibilityState === "hidden") {
+        keys.current.clear();
+        useWorld.getState().save();
+      }
     };
     document.addEventListener("visibilitychange", onHide);
     window.__controlsTest = {
@@ -79,7 +89,7 @@ export function NeonStage() {
     return () => {
       window.removeEventListener("keydown", down);
       window.removeEventListener("keyup", up);
-      window.removeEventListener("blur", blur);
+      window.removeEventListener("blur", release);
       document.removeEventListener("visibilitychange", onHide);
       delete window.__controlsTest;
     };
@@ -170,19 +180,27 @@ export function NeonStage() {
     else keys.current.delete(code);
   }
 
+  function endHold(code: string) {
+    return () => hold(code, false);
+  }
+
+  const door = lookAt(world, "door");
+  const showDoor = Boolean(door) && panel === "none" && !talk && !arcade;
+
   return (
     <div className="world-root flex flex-col">
       <div className="relative min-h-0 flex-1">
         <canvas ref={canvasRef} className="pixel-screen h-full w-full touch-none" aria-label="The Neon Block" />
         <WorldOverlay />
       </div>
-      <div className="grid grid-cols-3 gap-2 border-t border-line bg-ink px-3 py-3 md:hidden">
+      <div className={`grid gap-2 border-t border-line bg-ink px-3 py-3 md:hidden ${showDoor ? "grid-cols-4" : "grid-cols-3"}`}>
         <button
           type="button"
           className="press h-14 rounded-2xl border border-line bg-ink-2 text-sm font-medium text-cream"
           onPointerDown={() => hold("KeyA", true)}
-          onPointerUp={() => hold("KeyA", false)}
-          onPointerLeave={() => hold("KeyA", false)}
+          onPointerUp={endHold("KeyA")}
+          onPointerCancel={endHold("KeyA")}
+          onPointerLeave={endHold("KeyA")}
         >
           Left
         </button>
@@ -191,17 +209,30 @@ export function NeonStage() {
           className="press h-14 rounded-2xl bg-gold text-sm font-medium text-ink"
           onClick={() => {
             unlockAudio();
-            useWorld.getState().interact();
+            useWorld.getState().interact("act");
           }}
         >
           Act
         </button>
+        {showDoor ? (
+          <button
+            type="button"
+            className="press h-14 rounded-2xl border border-gold bg-ink-2 text-sm font-medium text-gold"
+            onClick={() => {
+              unlockAudio();
+              useWorld.getState().interact("door");
+            }}
+          >
+            Door
+          </button>
+        ) : null}
         <button
           type="button"
           className="press h-14 rounded-2xl border border-line bg-ink-2 text-sm font-medium text-cream"
           onPointerDown={() => hold("KeyD", true)}
-          onPointerUp={() => hold("KeyD", false)}
-          onPointerLeave={() => hold("KeyD", false)}
+          onPointerUp={endHold("KeyD")}
+          onPointerCancel={endHold("KeyD")}
+          onPointerLeave={endHold("KeyD")}
         >
           Right
         </button>
