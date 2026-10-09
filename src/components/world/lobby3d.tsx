@@ -105,12 +105,13 @@ export function GiltLobby3D() {
         const THREE = await import("three");
         if (disposed) return;
 
-        renderer = new THREE.WebGLRenderer({ canvas: element, antialias: true, powerPreference: "low-power" });
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
-        renderer.setClearColor(0x09060a);
-        renderer.outputColorSpace = THREE.SRGBColorSpace;
-        renderer.toneMapping = THREE.ACESFilmicToneMapping;
-        renderer.toneMappingExposure = 1.2;
+        const gl = new THREE.WebGLRenderer({ canvas: element, antialias: true, powerPreference: "low-power" });
+        renderer = gl;
+        gl.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
+        gl.setClearColor(0x09060a);
+        gl.outputColorSpace = THREE.SRGBColorSpace;
+        gl.toneMapping = THREE.ACESFilmicToneMapping;
+        gl.toneMappingExposure = 1.2;
 
         const scene = new THREE.Scene();
         stage = scene;
@@ -289,7 +290,7 @@ export function GiltLobby3D() {
       input.clear();
       stage?.traverse((node: unknown) => {
         if (typeof node !== "object" || node === null || !("isMesh" in node)) return;
-        const mesh = node as {
+        const mesh = node as unknown as {
           geometry: { dispose: () => void };
           material: { dispose: () => void } | Array<{ dispose: () => void }>;
         };
