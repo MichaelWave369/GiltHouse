@@ -110,17 +110,19 @@ function gameLabel(game: Ledger["game"]) {
   return "House";
 }
 
-export function Floor({ return3DPose, onLeave3D, onChoose3D }: {
+export function Floor({ return3DPose, onLeave3D, onChoose3D, from3DLobby, onBackTo3DLobby }: {
   return3DPose: Floor3DPose | null;
   onLeave3D: () => void;
   onChoose3D: (game: FloorGame, pose: Floor3DPose) => void;
+  from3DLobby: boolean;
+  onBackTo3DLobby: () => void;
 }) {
   const setView = useCasino((s) => s.setView);
   const ledger = useCasino((s) => s.ledger);
   const resetPurse = useCasino((s) => s.resetPurse);
   // When returning from a real casino game opened inside the 3D showroom,
   // start directly at the previous location. A direct 2D entry stays in 2D.
-  const [show3D, setShow3D] = useState(() => return3DPose !== null);
+  const [show3D, setShow3D] = useState(() => from3DLobby || return3DPose !== null);
   const close3D = useCallback(() => {
     setShow3D(false);
     onLeave3D();
@@ -206,7 +208,8 @@ export function Floor({ return3DPose, onLeave3D, onChoose3D }: {
       </footer>
       {show3D ? (
         <Suspense fallback={<div role="status" className="fixed inset-0 z-50 flex items-center justify-center bg-ink text-gold">Loading the 3D gaming floor…</div>}>
-          <FloorWalk3D onClose={close3D} onChoose={onChoose3D} returnPose={return3DPose} />
+          <FloorWalk3D onClose={close3D} onChoose={onChoose3D} returnPose={return3DPose}
+            onBackTo3DLobby={from3DLobby ? onBackTo3DLobby : undefined} />
         </Suspense>
       ) : null}
     </Frame>
