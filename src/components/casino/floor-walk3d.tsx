@@ -393,7 +393,7 @@ export function FloorWalk3D({
         ) : null}
       </div>
       <section aria-label="Casino games" className="shrink-0 border-t border-line bg-ink px-3 py-2">
-        <div className="mx-auto grid max-w-5xl grid-cols-4 gap-1 sm:grid-cols-8">
+        <div role="group" aria-label="Casino table shortcuts" className="mx-auto grid max-w-5xl grid-cols-4 gap-1 sm:grid-cols-8">
           {FLOOR3D_STATIONS.map((station) => (
             <button type="button" key={station.id} onClick={() => onChoose(station.game)}
               className="press min-h-11 rounded-lg border border-line bg-panel p-1 text-center text-[0.65rem] font-semibold text-gold hover:border-gold">
