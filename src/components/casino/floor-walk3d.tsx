@@ -11,7 +11,8 @@ import {
   type Floor3DPose,
   type FloorGame,
 } from "@/lib/casino/floor3d";
-import { findFloor3DRoute } from "@/lib/casino/floor3d-nav";
+import { findFloor3DRoute, floor3DHeading, floor3DTarget } from "@/lib/casino/floor3d-nav";
+import { floor3DArrival } from "@/lib/casino/floor3d-arrival";
 import { sampleFloor3DGuide, FLOOR_GUIDE_MAX_MARKERS } from "@/lib/casino/floor3d-guide";
 
 const Floor3DWayfinder = lazy(() => import("@/components/casino/floor-wayfinder").then((m) => ({ default: m.Floor3DWayfinder })));
@@ -49,7 +50,7 @@ export function FloorWalk3D({
   // R15 renderer reads the latest selected destination without tearing down WebGL.
   const guideChoice = useRef<FloorGame | null>(null);
   guideChoice.current = mapTarget;
-  const [guideInfo, setGuideInfo] = useState<{ game: FloorGame; markers: number; meters: number | null } | null>(null);
+  const [guideInfo, setGuideInfo] = useState<{ game: FloorGame; markers: number; meters: number | null; heading: string; beacon: boolean } | null>(null);
   const [cameraLocation, setCameraLocation] = useState(() => safeFloor3DReturnPose(returnPose));
   const [restored] = useState(() => returnPose !== null);
   const [reduced] = useState(() => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
@@ -310,10 +311,36 @@ export function FloorWalk3D({
         arrows.frustumCulled = false;
         arrows.renderOrder = 5;
         world.add(arrows);
+        // R16: a real-world anchored destination beacon, on the safe aisle
+        // approach coordinate rather than inside the solid casino table.
+        // Two tiny meshes only, no added point lights or expensive bloom.
+        const beacon = new THREE.Group();
+        const beaconRing = new THREE.Mesh(
+          new THREE.TorusGeometry(0.48, 0.075, 6, 32),
+          new THREE.MeshBasicMaterial({
+            color: 0xffd67b, transparent: true, opacity: 0.88,
+            depthWrite: false, side: THREE.DoubleSide,
+          }),
+        );
+        beaconRing.rotation.x = -Math.PI / 2;
+        beaconRing.position.y = 0.15;
+        beacon.add(beaconRing);
+        const beaconGem = new THREE.Mesh(
+          new THREE.OctahedronGeometry(0.24, 0),
+          new THREE.MeshBasicMaterial({
+            color: 0xffeda9, transparent: true, opacity: 0.93,
+            depthWrite: false,
+          }),
+        );
+        beaconGem.position.y = 1.30;
+        beacon.add(beaconGem);
+        beacon.visible = false;
+        world.add(beacon);
         const arrowTransform = new THREE.Object3D();
         let previousGuide: FloorGame | null = null;
         let previousGuideX = Number.NaN;
         let previousGuideZ = Number.NaN;
+        let previousGuideYaw = Number.NaN;
         let lastGuidePlan = 0;
 
         function renderGuide(stamp: number) {
@@ -322,20 +349,26 @@ export function FloorWalk3D({
             if (previousGuide !== null) {
               previousGuide = null;
               arrows.count = 0;
+              beacon.visible = false;
               setGuideInfo(null);
             }
             return;
           }
           if (game === previousGuide &&
               Math.hypot(x - previousGuideX, z - previousGuideZ) < 0.6 &&
+              Math.abs(yaw - previousGuideYaw) < 0.25 &&
               stamp - lastGuidePlan < 1700) return;
 
           previousGuide = game;
           previousGuideX = x;
           previousGuideZ = z;
+          previousGuideYaw = yaw;
           lastGuidePlan = stamp;
           const route = findFloor3DRoute(snapshot(), game);
           const markers = sampleFloor3DGuide(route);
+          const target = floor3DTarget(game);
+          beacon.visible = target !== null && route !== null;
+          if (target) beacon.position.set(target.x, 0, target.z);
           for (let i = 0; i < markers.length; i++) {
             const marker = markers[i];
             arrowTransform.position.set(marker.x, 0.115, marker.z);
@@ -346,9 +379,11 @@ export function FloorWalk3D({
           arrows.count = markers.length;
           arrows.instanceMatrix.needsUpdate = true;
           const meters = route ? Math.round(route.meters * 10) / 10 : null;
+          const heading = floor3DHeading(snapshot(), route);
           setGuideInfo((previous) => previous?.game === game &&
-            previous.markers === markers.length && previous.meters === meters
-            ? previous : { game, markers: markers.length, meters });
+            previous.markers === markers.length && previous.meters === meters &&
+            previous.heading === heading && previous.beacon === beacon.visible
+            ? previous : { game, markers: markers.length, meters, heading, beacon: beacon.visible });
         }
 
         const raycaster = new THREE.Raycaster();
@@ -426,7 +461,10 @@ export function FloorWalk3D({
             setNearGame(target);
             setNotice("");
           }
-          if (!reduced) marquee.scale.setScalar(1 + Math.sin(stamp * 0.0005) * 0.003);
+          if (!reduced) {
+            marquee.scale.setScalar(1 + Math.sin(stamp * 0.0005) * 0.003);
+            beaconGem.position.y = 1.30 + Math.sin(stamp * 0.0017) * 0.12;
+          }
           renderer.render(world, camera);
           raf = requestAnimationFrame(animate);
         }
@@ -472,6 +510,7 @@ export function FloorWalk3D({
   }, [onChoose, onClose, reduced, returnPose]);
 
   const near = FLOOR3D_STATIONS.find((s) => s.game === nearGame);
+  const arrival = floor3DArrival(cameraLocation, mapTarget);
   return (
     <div ref={roomRef} tabIndex={-1} role="dialog" aria-modal="true"
       aria-label="Gilt House 3D gaming floor"
@@ -511,14 +550,27 @@ export function FloorWalk3D({
         {mapTarget && !mapOpen ? (
           <div className="pointer-events-auto absolute left-3 top-28 z-20 max-w-[min(18rem,75%)] rounded-xl border border-gold/60 bg-ink/95 p-3 text-xs text-cream shadow-lg">
             <output aria-label="3D floor guidance" data-target={mapTarget} data-markers={guideInfo?.markers ?? 0}
+              data-beacon={guideInfo?.beacon ?? false} data-arrived={arrival?.canEnter ?? false}
               className="block leading-relaxed">
               <strong className="block text-gold">{FLOOR3D_STATIONS.find((station) => station.game === mapTarget)?.name ?? "Selected table"}</strong>
               {phase === "ready"
-                ? guideInfo?.meters !== null && guideInfo?.meters !== undefined
-                  ? `${guideInfo.meters.toFixed(1)} m · Follow the glowing gold arrows on the floor.`
-                  : "No safe path available. Use the game shortcuts below."
+                ? arrival?.canEnter
+                  ? "You've arrived! Press F to enter this table, or use the Enter table button below."
+                  : guideInfo?.meters !== null && guideInfo?.meters !== undefined
+                    ? `${guideInfo.meters.toFixed(1)} m · Follow the gold arrows to the glowing destination beacon. ${guideInfo.heading}`
+                    : "No safe path available. Use the game shortcuts below."
                 : "Map destination selected. 3D display is optional."}
             </output>
+            {phase === "ready" && arrival?.canEnter && mapTarget ? (
+              <button type="button" className="press mt-2 mr-2 min-h-11 rounded-lg border border-gold bg-gold/15 px-3 font-semibold text-gold"
+                onClick={() => {
+                  if (canOpenFloor3DTable(mapTarget, latestPose.current.x, latestPose.current.z)) {
+                    onChoose(mapTarget, latestPose.current);
+                  }
+                }}>
+                Enter selected table
+              </button>
+            ) : null}
             <button type="button" className="press mt-2 min-h-9 rounded-lg border border-line px-3 text-gold"
               onClick={() => setMapTarget(null)}>Clear guide</button>
           </div>
