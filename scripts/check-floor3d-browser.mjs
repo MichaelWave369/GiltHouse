@@ -88,6 +88,23 @@ try {
     await room.getByRole("button", { name: "Clear guide" }).click();
     await guide.waitFor({ state: "detached" });
 
+    // R16: reselect Blackjack for the real 3D walk, then prove the beacon
+    // arrives in the world while the camera remains under player control.
+    await room.getByRole("button", { name: "Show floor map" }).click();
+    await map.waitFor({ state: "visible" });
+    await map.getByRole("group", { name: "Choose map destination" })
+      .getByRole("button", { name: "THE SHOE" }).click();
+    await room.getByRole("button", { name: "Hide floor map" }).click();
+    await map.waitFor({ state: "detached" });
+    await guide.waitFor({ state: "visible" });
+    assert.equal(await guide.getAttribute("data-arrived"), "false");
+    await page.waitForFunction(() => {
+      const indicator = document.querySelector('output[aria-label="3D floor guidance"]');
+      const gpu = document.querySelector('output[aria-label="3D camera location"]');
+      const fallback = document.body.textContent?.includes("3D graphics aren't supported here.");
+      return Boolean(fallback || (gpu && indicator?.getAttribute("data-beacon") === "true"));
+    }, null, { timeout: 15000 });
+
     // The showroom must not let F teleport from its spawn point.
     await page.keyboard.press("f");
     await room.waitFor({ state: "visible" });
@@ -99,6 +116,7 @@ try {
       document.body.textContent?.includes("3D graphics aren't supported here."),
       null, { timeout: 15000 });
     const hud = room.getByLabel("3D camera location");
+    let enteredFromBeacon = false;
     if (await hud.isVisible()) {
       // Playwright's last clicked casino shortcut can own focus. The game
       // intentionally ignores movement while a button is focused.
@@ -143,19 +161,30 @@ try {
         `Table collision should stop the camera at the Blackjack aisle rail, not inside felt: x=${x}`);
       assert.ok(z < 7.3 && z > 4.5, `The aisle should remain accessible: z=${z}`);
       await room.getByRole("button", { name: /F · Enter THE SHOE/ }).waitFor({ state: "visible" });
-      console.log(`PASS: real Three.js keyboard approach stopped at solid Blackjack rail, x=${x}, z=${z}`);
+      await page.waitForFunction(() => document.querySelector('output[aria-label="3D floor guidance"]')?.getAttribute("data-arrived") === "true",
+        null, { timeout: 12000 });
+      await guide.getByText(/You've arrived!/).waitFor({ state: "visible" });
+      const enterSelected = room.getByRole("button", { name: "Enter selected table" });
+      await enterSelected.waitFor({ state: "visible" });
+      await enterSelected.click();
+      await room.waitFor({ state: "detached" });
+      enteredFromBeacon = true;
+      console.log(`PASS: R16 3D destination beacon reached Blackjack; existing game launched at x=${x}, z=${z}`);
     } else {
       console.log("SKIP: 3D GPU movement probe unavailable; accessible HTML casino table routing remains tested.");
     }
 
-    await room.getByRole("button", { name: "Back to casino directory" }).click();
-    await room.waitFor({ state: "detached" });
-    await open.waitFor({ state: "visible" });
-
-    await open.click();
-    await room.waitFor({ state: "visible" });
-    await room.getByRole("button", { name: "THE SHOE" }).click();
-    await room.waitFor({ state: "detached" });
+    if (!enteredFromBeacon) {
+      // WebGL-disabled environments still enter real Blackjack through the
+      // original accessible game shortcut, with no false 3D claims.
+      await room.getByRole("button", { name: "Back to casino directory" }).click();
+      await room.waitFor({ state: "detached" });
+      await open.waitFor({ state: "visible" });
+      await open.click();
+      await room.waitFor({ state: "visible" });
+      await room.getByRole("button", { name: "THE SHOE" }).click();
+      await room.waitFor({ state: "detached" });
+    }
     await page.getByRole("button", { name: "Back to the floor" })
       .waitFor({ state: "visible", timeout: 12000 });
     await page.getByRole("button", { name: "Back to the floor" }).click();
@@ -180,7 +209,7 @@ try {
     assert.equal(await page.evaluate(() => localStorage.getItem("gilt-house-v1")), before,
       "Navigating in 3D must not change casino chip storage");
     assert.deepEqual(errors, [], "No unhandled browser errors during showroom journey");
-    console.log("PASS: 3D floor opens, physical table collision checked when WebGL is present, Blackjack returns to 3D, direct 2D game remains 2D, chip save unchanged.");
+    console.log("PASS: R16 gold arrival beacon and proximity-gated table entry (WebGL where present), R12 game return, 2D game and chip isolation.");
   } finally {
     await page.close();
   }
