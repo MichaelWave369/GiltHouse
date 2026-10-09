@@ -64,12 +64,27 @@ try {
       null, { timeout: 15000 });
     const hud = room.getByLabel("3D camera location");
     if (await hud.isVisible()) {
+      // Playwright's last clicked casino shortcut can own focus. The game
+      // intentionally ignores movement while a button is focused.
+      await room.focus();
+      assert.equal(
+        await page.evaluate(() => document.activeElement?.getAttribute("aria-label")),
+        "Gilt House 3D gaming floor",
+        "Room must own keyboard focus for movement controls",
+      );
+      console.log("R13: focused 3D room, starting camera Z:", await hud.getAttribute("data-z"));
       await page.keyboard.down("w");
       try {
-        await page.waitForFunction(() => {
-          const node = document.querySelector('output[aria-label="3D camera location"]');
-          return node && Number(node.getAttribute("data-z")) < 7.3;
-        }, null, { timeout: 12000 });
+        try {
+          await page.waitForFunction(() => {
+            const node = document.querySelector('output[aria-label="3D camera location"]');
+            return node && Number(node.getAttribute("data-z")) < 7.3;
+          }, null, { timeout: 12000 });
+        } catch (error) {
+          console.error("3D movement probe timed out. HUD:", await hud.getAttribute("data-z"),
+            "focused:", await page.evaluate(() => document.activeElement?.outerHTML?.slice(0, 170)));
+          throw error;
+        }
       } finally {
         await page.keyboard.up("w");
       }
