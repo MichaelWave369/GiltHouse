@@ -67,6 +67,27 @@ try {
     await room.getByRole("button", { name: "Hide floor map" }).click();
     await map.waitFor({ state: "detached" });
 
+    // R15: the selected target survives map close, and the real Three.js
+    // scene renders a bounded set of gold route arrows, not auto-walking.
+    const guide = room.locator('output[aria-label="3D floor guidance"]');
+    await guide.waitFor({ state: "visible", timeout: 12000 });
+    assert.equal(await guide.getAttribute("data-target"), "blackjack");
+    await page.waitForFunction(() => {
+      const path = document.querySelector('output[aria-label="3D floor guidance"]');
+      const ready = document.querySelector('output[aria-label="3D camera location"]');
+      const fallback = document.body.textContent?.includes("3D graphics aren't supported here.");
+      return Boolean(fallback || (ready && path && Number(path.getAttribute("data-markers")) > 0));
+    }, null, { timeout: 15000 });
+    const markerCount = Number(await guide.getAttribute("data-markers"));
+    if (await room.getByLabel("3D camera location").isVisible()) {
+      assert.ok(markerCount > 0 && markerCount <= 72,
+        `The GPU waypoint batch should be nonempty and bounded: ${markerCount}`);
+    }
+    assert.equal(await page.evaluate(() => localStorage.getItem("gilt-house-v1")), before,
+      "3D breadcrumbs must not change the play-chip purse");
+    await room.getByRole("button", { name: "Clear guide" }).click();
+    await guide.waitFor({ state: "detached" });
+
     // The showroom must not let F teleport from its spawn point.
     await page.keyboard.press("f");
     await room.waitFor({ state: "visible" });

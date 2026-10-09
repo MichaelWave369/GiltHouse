@@ -11,6 +11,8 @@ import {
   type Floor3DPose,
   type FloorGame,
 } from "@/lib/casino/floor3d";
+import { findFloor3DRoute } from "@/lib/casino/floor3d-nav";
+import { sampleFloor3DGuide, FLOOR_GUIDE_MAX_MARKERS } from "@/lib/casino/floor3d-guide";
 
 const Floor3DWayfinder = lazy(() => import("@/components/casino/floor-wayfinder").then((m) => ({ default: m.Floor3DWayfinder })));
 
@@ -44,6 +46,10 @@ export function FloorWalk3D({
   const [tableBlocked, setTableBlocked] = useState(false);
   const [mapOpen, setMapOpen] = useState(false);
   const [mapTarget, setMapTarget] = useState<FloorGame | null>(null);
+  // R15 renderer reads the latest selected destination without tearing down WebGL.
+  const guideChoice = useRef<FloorGame | null>(null);
+  guideChoice.current = mapTarget;
+  const [guideInfo, setGuideInfo] = useState<{ game: FloorGame; markers: number; meters: number | null } | null>(null);
   const [cameraLocation, setCameraLocation] = useState(() => safeFloor3DReturnPose(returnPose));
   const [restored] = useState(() => returnPose !== null);
   const [reduced] = useState(() => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
@@ -281,6 +287,70 @@ export function FloorWalk3D({
         }
         const marquee = sign("THE GAMING FLOOR", 0xe9c267, 6.5);
         marquee.position.set(0, 4.8, -13.46);
+
+        // R15: one capped GPU instance batch, not one draw call per arrow.
+        // The arrow shape points toward world -Z when yaw=0, same as the camera.
+        const arrowShape = new THREE.Shape();
+        arrowShape.moveTo(0, 0.30);
+        arrowShape.lineTo(0.17, 0.01);
+        arrowShape.lineTo(0.07, 0.01);
+        arrowShape.lineTo(0.07, -0.23);
+        arrowShape.lineTo(-0.07, -0.23);
+        arrowShape.lineTo(-0.07, 0.01);
+        arrowShape.lineTo(-0.17, 0.01);
+        arrowShape.closePath();
+        const arrowGeometry = new THREE.ShapeGeometry(arrowShape);
+        arrowGeometry.rotateX(-Math.PI / 2);
+        const arrows = new THREE.InstancedMesh(arrowGeometry,
+          new THREE.MeshBasicMaterial({
+            color: 0xffd575, transparent: true, opacity: 0.88,
+            depthWrite: false, side: THREE.DoubleSide,
+          }), FLOOR_GUIDE_MAX_MARKERS);
+        arrows.count = 0;
+        arrows.frustumCulled = false;
+        arrows.renderOrder = 5;
+        world.add(arrows);
+        const arrowTransform = new THREE.Object3D();
+        let previousGuide: FloorGame | null = null;
+        let previousGuideX = Number.NaN;
+        let previousGuideZ = Number.NaN;
+        let lastGuidePlan = 0;
+
+        function renderGuide(stamp: number) {
+          const game = guideChoice.current;
+          if (!game) {
+            if (previousGuide !== null) {
+              previousGuide = null;
+              arrows.count = 0;
+              setGuideInfo(null);
+            }
+            return;
+          }
+          if (game === previousGuide &&
+              Math.hypot(x - previousGuideX, z - previousGuideZ) < 0.6 &&
+              stamp - lastGuidePlan < 1700) return;
+
+          previousGuide = game;
+          previousGuideX = x;
+          previousGuideZ = z;
+          lastGuidePlan = stamp;
+          const route = findFloor3DRoute(snapshot(), game);
+          const markers = sampleFloor3DGuide(route);
+          for (let i = 0; i < markers.length; i++) {
+            const marker = markers[i];
+            arrowTransform.position.set(marker.x, 0.115, marker.z);
+            arrowTransform.rotation.set(0, -marker.yaw, 0);
+            arrowTransform.updateMatrix();
+            arrows.setMatrixAt(i, arrowTransform.matrix);
+          }
+          arrows.count = markers.length;
+          arrows.instanceMatrix.needsUpdate = true;
+          const meters = route ? Math.round(route.meters * 10) / 10 : null;
+          setGuideInfo((previous) => previous?.game === game &&
+            previous.markers === markers.length && previous.meters === meters
+            ? previous : { game, markers: markers.length, meters });
+        }
+
         const raycaster = new THREE.Raycaster();
         const pointer = new THREE.Vector2();
         function size() {
@@ -340,6 +410,7 @@ export function FloorWalk3D({
             setTableBlocked(blocked);
           }
           latestPose.current = snapshot();
+          renderGuide(stamp);
           // Throttled, readable position HUD doubles as actual-browser physics QA.
           if (stamp - lastHudUpdate >= 240) {
             lastHudUpdate = stamp;
@@ -435,6 +506,21 @@ export function FloorWalk3D({
             <Suspense fallback={<p role="status" className="pointer-events-none absolute left-3 top-16 rounded-lg bg-ink p-3 text-xs text-gold">Loading floor map…</p>}>
               <Floor3DWayfinder pose={cameraLocation} game={mapTarget} onSelect={setMapTarget} onClose={() => setMapOpen(false)} />
             </Suspense>
+          </div>
+        ) : null}
+        {mapTarget && !mapOpen ? (
+          <div className="pointer-events-auto absolute left-3 top-28 z-20 max-w-[min(18rem,75%)] rounded-xl border border-gold/60 bg-ink/95 p-3 text-xs text-cream shadow-lg">
+            <output aria-label="3D floor guidance" data-target={mapTarget} data-markers={guideInfo?.markers ?? 0}
+              className="block leading-relaxed">
+              <strong className="block text-gold">{FLOOR3D_STATIONS.find((station) => station.game === mapTarget)?.name ?? "Selected table"}</strong>
+              {phase === "ready"
+                ? guideInfo?.meters !== null && guideInfo?.meters !== undefined
+                  ? `${guideInfo.meters.toFixed(1)} m · Follow the glowing gold arrows on the floor.`
+                  : "No safe path available. Use the game shortcuts below."
+                : "Map destination selected. 3D display is optional."}
+            </output>
+            <button type="button" className="press mt-2 min-h-9 rounded-lg border border-line px-3 text-gold"
+              onClick={() => setMapTarget(null)}>Clear guide</button>
           </div>
         ) : null}
         {phase === "ready" && near ? (
