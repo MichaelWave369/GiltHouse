@@ -1,6 +1,9 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { lazy, Suspense, useEffect, useRef, useState, type ReactNode } from "react";
 import { MemoryGame, PulseGame } from "@/components/world/arcade";
 import { AgentDesk } from "@/components/world/agent-desk";
+import { isLobby3DScene } from "@/lib/world/lobby3d";
+
+const GiltLobby3D = lazy(() => import("@/components/world/lobby3d").then((m) => ({ default: m.GiltLobby3D })));
 import { FACADES, ITEMS, LOCATIONS, actorById, encounterById } from "@/lib/world/content";
 import { drawPortrait } from "@/lib/world/draw";
 import { choiceVisible, currentObjective, dialogueNodes, journal, lookAt, speakerTitle } from "@/lib/world/logic";
@@ -50,6 +53,11 @@ export function WorldOverlay() {
           </p>
         </div>
         <div className="flex gap-2">
+          {isLobby3DScene(world.scene) && panel === "none" && !talk && !arcade ? (
+            <button type="button" className="press h-11 rounded-full border border-gold bg-ink-2 px-3 text-sm text-gold" onClick={() => useWorld.getState().openPanel("lobby-3d")}>
+              Enter 3D lobby
+            </button>
+          ) : null}
           <button type="button" className="press h-11 rounded-full border border-line bg-ink-2 px-3 text-sm text-cream" onClick={() => useWorld.getState().openPanel("pause")}>
             Menu
           </button>
@@ -122,6 +130,11 @@ export function WorldOverlay() {
       {panel === "map" ? <DistrictMap /> : null}
       {panel === "help" ? <Help /> : null}
       {panel === "agent-desk" ? <Sheet title="Backstage Agent Desk"><AgentDesk /></Sheet> : null}
+      {panel === "lobby-3d" ? (
+        <Suspense fallback={<div className="pointer-events-auto absolute inset-0 z-50 flex items-center justify-center bg-ink text-gold" role="status">Opening Gilt House 3D…</div>}>
+          <GiltLobby3D />
+        </Suspense>
+      ) : null}
       {panel === "shop" ? <Shop /> : null}
       {talk ? <TalkBox /> : null}
       {arcade ? (
@@ -342,6 +355,9 @@ function Pause() {
         <MenuButton label="Map" onClick={() => open("map")} />
         <MenuButton label="Help" onClick={() => open("help")} />
         <MenuButton label="Agent Desk" onClick={() => open("agent-desk")} />
+        {useWorld.getState().world.scene === "gilt-lobby" ? (
+          <MenuButton label="3D Grand Lobby" onClick={() => open("lobby-3d")} />
+        ) : null}
         <MenuButton label="Training Lab" onClick={() => useWorld.getState().enterCasino("training")} />
         <MenuButton label="The Pit" onClick={() => useWorld.getState().enterCasino("workshop")} />
       </div>
