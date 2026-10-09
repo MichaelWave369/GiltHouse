@@ -28,10 +28,28 @@ for (const asset of assets) {
 
 const all = await readdir(resolve(root, "assets"));
 assert.ok(all.some((name) => name.endsWith(".js")), "No generated app JavaScript.");
+
+// A stylesheet that exists but contains only Tailwind reset/theme CSS passed R7
+// while leaving the site as tiny unstyled text and a collapsed black canvas.
+// Qualify the actual utility selectors the live React world requires.
+const stylesheets = await Promise.all(
+  all.filter((name) => name.endsWith(".css"))
+    .map((name) => readFile(resolve(root, "assets", name), "utf8")),
+);
+const css = stylesheets.join("\n");
+for (const selector of ["flex", "relative", "absolute", "inset-0", "min-h-0", "h-full", "w-full", "rounded-2xl", "text-cream", "bg-gold"]) {
+  // Escape CSS punctuation: optional '-' and slash are literal in this list.
+  const matcher = new RegExp(`\\.${selector}\\s*\\{`);
+  assert.match(css, matcher, `Tailwind utility .${selector} is missing from Pages CSS: game layout will collapse.`);
+}
+assert.match(css, /\\.world-root\\s*\\{/, "Gilt House world viewport styles are missing.");
+assert.ok(css.length > 10000, "The static CSS is suspiciously small; source scanning may have failed.");
+
+assert.ok(all.some((name) => name.endsWith(".js")), "No generated app JavaScript.");
 const scripts = await Promise.all(all.filter((name) => name.endsWith(".js"))
   .map((name) => readFile(resolve(root, "assets", name), "utf8")));
 const bundle = scripts.join("\n");
 assert.doesNotMatch(bundle, /site\.web\.api\.espn\.com/, "Server-only live scoreboard was bundled into GitHub Pages.");
 assert.doesNotMatch(bundle, /@tanstack\/react-start/, "Static bundle must not import a server runtime.");
 
-console.log(`PASS: static artifact at /GiltHouse/; ${assets.length} page assets verified; no live scoreboard server dependency.`);
+console.log(`PASS: static artifact at /GiltHouse/; ${assets.length} page assets verified; ${css.length} bytes of qualified Tailwind CSS; no live scoreboard server dependency.`);
