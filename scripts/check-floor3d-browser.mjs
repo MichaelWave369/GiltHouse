@@ -66,12 +66,28 @@ try {
     await page.getByRole("button", { name: "Back to the floor" })
       .waitFor({ state: "visible", timeout: 12000 });
     await page.getByRole("button", { name: "Back to the floor" }).click();
+
+    // R12: returning from the existing game must reopen the showroom, not
+    // silently drop the player back into the 2D casino directory.
+    await room.waitFor({ state: "visible", timeout: 15000 });
+    await room.getByText("Welcome back. Your 3D position and view were restored.")
+      .waitFor({ state: "visible", timeout: 15000 });
+    await room.getByRole("button", { name: "Back to casino directory" }).click();
+    await room.waitFor({ state: "detached" });
     await open.waitFor({ state: "visible" });
+
+    // Leaving the showroom clears the return ticket. Plain 2D game access
+    // must remain 2D when the player returns.
+    await page.locator("button.table-card").filter({ hasText: "The Wheel" }).click();
+    await page.getByRole("button", { name: "Back to the floor" }).click();
+    await open.waitFor({ state: "visible" });
+    assert.equal(await room.count(), 0,
+      "Direct 2D game selection must never automatically open a 3D scene");
 
     assert.equal(await page.evaluate(() => localStorage.getItem("gilt-house-v1")), before,
       "Navigating in 3D must not change casino chip storage");
     assert.deepEqual(errors, [], "No unhandled browser errors during showroom journey");
-    console.log("PASS: 3D floor opens, eight game entrances exist, F cannot teleport, Blackjack opens and returns without chip changes.");
+    console.log("PASS: 3D floor opens, Blackjack returns to 3D with restored view, explicit 3D exit clears handoff, direct 2D game stays 2D, chip save unchanged.");
   } finally {
     await page.close();
   }
