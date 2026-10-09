@@ -1,0 +1,65 @@
+name: Gilt House Pages
+
+on:
+  pull_request:
+    paths:
+      - "src/**"
+      - "pages-static/**"
+      - "scripts/check-pages-dist.mjs"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/gilt-house-pages.yml"
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: "gilt-house-pages-${{ github.ref }}"
+  cancel-in-progress: false
+
+jobs:
+  qualify-static:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Install from lockfile
+        run: npm ci --no-audit --no-fund
+      - name: Existing regression tests
+        run: npm test
+      - name: Existing application typecheck
+        run: npm run typecheck
+      - name: Static Pages typecheck
+        run: npm run typecheck:pages
+      - name: Lint
+        run: npm run lint
+      - name: Build standalone React Pages edition
+        run: npm run build:pages
+      - name: Validate Pages artifact and base path
+        run: npm run check:pages
+      - name: Upload public Pages artifact (main only)
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist-pages
+
+  deploy:
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    needs: qualify-static
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    permissions:
+      pages: write
+      id-token: write
+    steps:
+      - uses: actions/configure-pages@v5
+      - id: deployment
+        uses: actions/deploy-pages@v4
