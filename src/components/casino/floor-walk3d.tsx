@@ -38,8 +38,9 @@ export function FloorWalk3D({
   useEffect(() => { roomRef.current?.focus(); }, []);
 
   useEffect(() => {
-    const element = canvasRef.current;
-    if (!element) return;
+    const liveCanvas = canvasRef.current;
+    if (!liveCanvas) return;
+    const element: HTMLCanvasElement = liveCanvas;
 
     let disposed = false;
     let raf = 0;
@@ -52,8 +53,8 @@ export function FloorWalk3D({
     } | undefined;
     const textures: Array<{ dispose: () => void }> = [];
     const input = held.current;
-    let x = FLOOR3D_SPAWN.x;
-    let z = FLOOR3D_SPAWN.z;
+    let x: number = FLOOR3D_SPAWN.x;
+    let z: number = FLOOR3D_SPAWN.z;
     let yaw = 0;
     let oldFrame = 0;
     let currentGame: FloorGame | null = null;
