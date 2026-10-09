@@ -80,7 +80,8 @@ export function GiltLobby3D() {
         const station = nearbyLobbyStation(cx, cz);
         if (station && canEnterLobbyPortal(station.view, cx, cz)) {
           event.preventDefault();
-          useWorld.getState().enterCasino(station.view);
+          if (station.view === "floor") useWorld.getState().enterCasino3DFromLobby();
+          else useWorld.getState().enterCasino(station.view);
         }
         return;
       }
@@ -274,7 +275,8 @@ export function GiltLobby3D() {
             setHint("Walk toward that doorway to enter, or use the room buttons below.");
             return;
           }
-          useWorld.getState().enterCasino(view);
+          if (view === "floor") useWorld.getState().enterCasino3DFromLobby();
+          else useWorld.getState().enterCasino(view);
         };
 
         // Entrance wall title. Canvas text avoids new remote artwork requests.
@@ -386,7 +388,8 @@ export function GiltLobby3D() {
   function navigate(view: string) {
     if (!validLobbyStation(view)) return;
     // This is the existing UI flow, NOT a casino bet / chip update.
-    useWorld.getState().enterCasino(view);
+    if (view === "floor") useWorld.getState().enterCasino3DFromLobby();
+    else useWorld.getState().enterCasino(view);
   }
 
   function startMotion(action: Motion) { pressed.current.add(action); }
@@ -426,7 +429,7 @@ export function GiltLobby3D() {
         {status === "ready" && nearby ? (
           <button type="button"
             className="press absolute bottom-4 left-1/2 z-10 min-h-11 -translate-x-1/2 rounded-full border border-gold bg-ink/95 px-5 text-sm font-semibold text-gold shadow-lg"
-            onClick={() => { if (validLobbyStation(nearby)) useWorld.getState().enterCasino(nearby); }}>
+            onClick={() => { if (validLobbyStation(nearby)) navigate(nearby); }}>
             F · Enter {LOBBY_STATIONS.find((s) => s.view === nearby)?.name ?? "room"}
           </button>
         ) : null}
@@ -443,6 +446,7 @@ export function GiltLobby3D() {
 
       <div className="shrink-0 border-t border-gold/30 bg-ink px-3 pb-3 pt-2">
         <p className="mb-2 text-center text-[0.65rem] uppercase tracking-widest text-gold">Choose an existing Gilt House room</p>
+        <p className="mb-2 text-center text-xs text-cream-dim">The Floor door opens the 3D gaming floor directly. The classic 2D directory is still available outside this 3D lobby.</p>
         <div className="mx-auto grid max-w-4xl grid-cols-2 gap-2 sm:grid-cols-4">
           {LOBBY_STATIONS.map((station) => (
             <button type="button" key={station.id} onClick={() => navigate(station.view)}
