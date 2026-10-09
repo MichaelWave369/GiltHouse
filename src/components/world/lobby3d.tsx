@@ -3,6 +3,8 @@ import {
   clampLobbyCamera,
   LOBBY_STATIONS,
   validLobbyStation,
+  nearbyLobbyStation,
+  canEnterLobbyPortal,
 } from "@/lib/world/lobby3d";
 import { useWorld } from "@/lib/world/store";
 
@@ -24,11 +26,16 @@ const CONTROLS: readonly { action: Motion; label: string }[] = [
  */
 export function GiltLobby3D() {
   const canvas = useRef<HTMLCanvasElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
   const pressed = useRef(new Set<Motion>());
   const [status, setStatus] = useState<"loading" | "ready" | "fallback">("loading");
   const [note, setNote] = useState("");
+  const [nearby, setNearby] = useState<string | null>(null);
+  const [hint, setHint] = useState("");
   const reduced = useWorld((s) => s.world.prefs.reduced);
   const exit = () => useWorld.getState().closePanel();
+
+  useEffect(() => { dialogRef.current?.focus(); }, []);
 
   useEffect(() => {
     let disposed = false;
@@ -52,6 +59,10 @@ export function GiltLobby3D() {
     let cx = 0;
     let cz = 8;
     let pointerX: number | null = null;
+    let pointerStart: { x: number; y: number } | null = null;
+    let dragged = false;
+    let onDoorTap: ((x: number, y: number) => void) | undefined;
+    let selectedView: string | null = null;
     let lastFrame = 0;
     const input = pressed.current;
     const element = canvas.current;
@@ -59,7 +70,15 @@ export function GiltLobby3D() {
 
     function keydown(event: KeyboardEvent) {
       const target = event.target as HTMLElement | null;
-      if (target?.closest("input, textarea, select, [contenteditable='true']")) return;
+      if (target?.closest("input, textarea, select, button, [contenteditable='true']")) return;
+      if (event.code === "KeyF" || event.code === "Enter") {
+        const station = nearbyLobbyStation(cx, cz);
+        if (station && canEnterLobbyPortal(station.view, cx, cz)) {
+          event.preventDefault();
+          useWorld.getState().enterCasino(station.view);
+        }
+        return;
+      }
       const action: Motion | undefined = ({
         KeyW: "forward", ArrowUp: "forward",
         KeyS: "back", ArrowDown: "back",
@@ -81,24 +100,35 @@ export function GiltLobby3D() {
       } as Record<string, Motion>)[event.code];
       if (action) input.delete(action);
     }
-    function release() { input.clear(); pointerX = null; }
+    function release() { input.clear(); pointerX = null; pointerStart = null; dragged = false; }
     function pointerDown(event: PointerEvent) {
       pointerX = event.clientX;
+      pointerStart = { x: event.clientX, y: event.clientY };
+      dragged = false;
       element?.setPointerCapture(event.pointerId);
     }
     function pointerMove(event: PointerEvent) {
       if (pointerX === null) return;
-      yaw += (event.clientX - pointerX) * 0.004;
+      if (pointerStart && Math.hypot(event.clientX - pointerStart.x, event.clientY - pointerStart.y) > 8) dragged = true;
+      yaw = Math.max(-1.15, Math.min(1.15, yaw + (event.clientX - pointerX) * 0.004));
       pointerX = event.clientX;
     }
-    function pointerUp() { pointerX = null; }
+    function pointerUp(event: PointerEvent) {
+      const tap = pointerStart !== null && !dragged &&
+        Math.hypot(event.clientX - pointerStart.x, event.clientY - pointerStart.y) < 8;
+      pointerX = null;
+      pointerStart = null;
+      dragged = false;
+      if (tap) onDoorTap?.(event.clientX, event.clientY);
+    }
+    function pointerCancel() { pointerX = null; pointerStart = null; dragged = false; }
     window.addEventListener("keydown", keydown);
     window.addEventListener("keyup", keyup);
     window.addEventListener("blur", release);
     element.addEventListener("pointerdown", pointerDown);
     element.addEventListener("pointermove", pointerMove);
     element.addEventListener("pointerup", pointerUp);
-    element.addEventListener("pointercancel", pointerUp);
+    element.addEventListener("pointercancel", pointerCancel);
 
     void (async () => {
       try {
@@ -207,18 +237,40 @@ export function GiltLobby3D() {
           glow(0, 4.3, z, 0xffb46f, 10);
         }
 
-        // All station destinations correspond to the existing Gilt House game.
+        // Door surfaces are selectable through Three.js raycasting.
+        // We still require physical proximity before a click can enter.
+        const doorTargets: ReturnType<typeof box>[] = [];
         for (const station of LOBBY_STATIONS) {
           const x = station.x;
           const z = -8.9;
           box(x, 2.35, z, 3.0, 4.7, 0.14, 0xa17a48, 0.7);
-          box(x, 2.1, z + 0.09, 2.63, 3.9, 0.16, 0x1a1225, 0.08, 0.6);
+          const entrance = box(x, 2.1, z + 0.09, 2.63, 3.9, 0.16, 0x1a1225, 0.08, 0.6);
+          entrance.userData.casinoView = station.view;
+          doorTargets.push(entrance);
           box(x, 0.13, z + 0.5, 2.7, 0.25, 0.95, station.color, 0.52);
           box(x, 4.53, z + 0.14, 3.1, 0.14, 0.29, station.color, 0.7);
           const sign = plaque(station.name, station.color, 2.95);
           sign.position.set(x, 3.5, z + 0.24);
           glow(x, 3.8, z + 0.8, station.color, 2.5);
         }
+
+        // A tap selects the 3D door itself, not an invented duplicate casino game.
+        const raycaster = new THREE.Raycaster();
+        const rayPoint = new THREE.Vector2();
+        onDoorTap = (px, py) => {
+          const bounds = element.getBoundingClientRect();
+          if (bounds.width <= 0 || bounds.height <= 0) return;
+          rayPoint.set(((px - bounds.left) / bounds.width) * 2 - 1, -((py - bounds.top) / bounds.height) * 2 + 1);
+          raycaster.setFromCamera(rayPoint, camera);
+          const hit = raycaster.intersectObjects(doorTargets, false)[0];
+          const view = hit?.object.userData.casinoView;
+          if (typeof view !== "string" || !validLobbyStation(view)) return;
+          if (!canEnterLobbyPortal(view, cx, cz)) {
+            setHint("Walk toward that doorway to enter, or use the room buttons below.");
+            return;
+          }
+          useWorld.getState().enterCasino(view);
+        };
 
         // Entrance wall title. Canvas text avoids new remote artwork requests.
         const title = plaque("GILT HOUSE", 0xe6c36a, 7);
@@ -255,6 +307,13 @@ export function GiltLobby3D() {
           }
           camera.position.set(cx, 1.75, cz);
           camera.lookAt(cx + Math.sin(yaw), 1.85, cz - Math.cos(yaw));
+          const station = nearbyLobbyStation(cx, cz);
+          const view = station?.view ?? null;
+          if (view !== selectedView) {
+            selectedView = view;
+            setNearby(view);
+            setHint("");
+          }
           // Reduced-motion freezes ambient animation, but manual navigation works.
           if (!reduced) {
             const t = clock.getElapsedTime();
@@ -286,7 +345,7 @@ export function GiltLobby3D() {
       element.removeEventListener("pointerdown", pointerDown);
       element.removeEventListener("pointermove", pointerMove);
       element.removeEventListener("pointerup", pointerUp);
-      element.removeEventListener("pointercancel", pointerUp);
+      element.removeEventListener("pointercancel", pointerCancel);
       input.clear();
       stage?.traverse((node: unknown) => {
         if (typeof node !== "object" || node === null || !("isMesh" in node)) return;
@@ -313,7 +372,7 @@ export function GiltLobby3D() {
   function stopMotion(action: Motion) { pressed.current.delete(action); }
 
   return (
-    <div className="pointer-events-auto absolute inset-0 z-50 flex flex-col bg-ink text-cream"
+    <div ref={dialogRef} tabIndex={-1} className="pointer-events-auto absolute inset-0 z-50 flex flex-col bg-ink text-cream"
       role="dialog" aria-modal="true" aria-label="Gilt House 3D promenade">
       <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-gold/35 bg-ink px-3 py-2">
         <div>
@@ -328,9 +387,19 @@ export function GiltLobby3D() {
       <div className="relative min-h-0 flex-1 overflow-hidden bg-[#100910]">
         <canvas ref={canvas} className="h-full w-full touch-none" aria-label="Interactive 3D Gilt House Art Deco casino lobby" />
         <div className="pointer-events-none absolute left-3 top-3 max-w-xs rounded-xl border border-gold/30 bg-ink/85 p-3 text-xs text-cream-dim">
-          <p className="font-semibold text-gold">WASD to walk · Q/E or arrows to turn</p>
-          <p className="mt-1">Drag across the room to look around. Choose a room below to enter.</p>
+          <p className="font-semibold text-gold">WASD walk · Q/E or arrows turn · F enters nearby doors</p>
+          <p className="mt-1">Drag to look around. Tap a door after walking close, or choose a room below.</p>
         </div>
+        {status === "ready" && nearby ? (
+          <button type="button"
+            className="press absolute bottom-4 left-1/2 z-10 min-h-11 -translate-x-1/2 rounded-full border border-gold bg-ink/95 px-5 text-sm font-semibold text-gold shadow-lg"
+            onClick={() => { if (canEnterLobbyPortal(nearby, 0, -6.4)) useWorld.getState().enterCasino(nearby); }}>
+            F · Enter {LOBBY_STATIONS.find((s) => s.view === nearby)?.name ?? "room"}
+          </button>
+        ) : null}
+        {hint && status === "ready" ? (
+          <p className="pointer-events-none absolute bottom-16 left-1/2 w-max max-w-[90%] -translate-x-1/2 rounded-xl bg-ink/90 px-3 py-2 text-center text-xs text-gold" role="status">{hint}</p>
+        ) : null}
         {status !== "ready" ? (
           <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-ink/70 p-5 text-center text-sm text-cream"
             role="status">
