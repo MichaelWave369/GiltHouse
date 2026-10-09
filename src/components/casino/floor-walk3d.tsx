@@ -309,7 +309,9 @@ export function FloorWalk3D({
 
         function animate(stamp: number) {
           if (disposed || !renderer) return;
-          const dt = Math.min(0.04, oldFrame ? (stamp - oldFrame) / 1000 : 0);
+          // Allow time to advance on slow/software GPUs; swept collision still
+          // substeps every move so stutters cannot tunnel through furniture.
+          const dt = Math.min(0.25, oldFrame ? (stamp - oldFrame) / 1000 : 0);
           oldFrame = stamp;
           const turning = Number(input.has("turnRight")) - Number(input.has("turnLeft"));
           yaw = Math.max(-1.4, Math.min(1.4, yaw + turning * dt * 1.3));
