@@ -6,6 +6,7 @@ on:
       - "src/**"
       - "pages-static/**"
       - "scripts/check-pages-dist.mjs"
+      - "scripts/check-pages-browser.mjs"
       - "package.json"
       - "package-lock.json"
       - ".github/workflows/gilt-house-pages.yml"
@@ -43,6 +44,17 @@ jobs:
         run: npm run build:pages
       - name: Validate Pages artifact and base path
         run: npm run check:pages
+      - name: Install Chromium for real Pages layout verification
+        run: npx playwright install --with-deps chromium
+      - name: Browser smoke - desktop and mobile
+        run: npm run check:pages:browser
+      - name: Upload browser layout screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gilt-house-layout-${{ github.run_id }}
+          path: artifacts/gilt-house-pages-*.png
+          if-no-files-found: ignore
       - name: Upload public Pages artifact (main only)
         if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         uses: actions/upload-pages-artifact@v3
