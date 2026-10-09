@@ -8,6 +8,7 @@ on:
       - "scripts/check-pages-dist.mjs"
       - "scripts/check-pages-browser.mjs"
       - "scripts/check-lobby3d-browser.mjs"
+      - "scripts/check-floor3d-browser.mjs"
       - "package.json"
       - "package-lock.json"
       - ".github/workflows/gilt-house-pages.yml"
@@ -51,6 +52,8 @@ jobs:
         run: npm run check:pages:browser
       - name: Browser smoke - 3D Gilt House lobby and casino return
         run: node scripts/check-lobby3d-browser.mjs
+      - name: Browser smoke - 3D Gaming Floor and Blackjack return
+        run: node scripts/check-floor3d-browser.mjs
       - name: Upload browser layout screenshots
         if: always()
         uses: actions/upload-artifact@v4
