@@ -125,7 +125,7 @@ test("R13 slides along solid table edges rather than freezing diagonal movement"
 });
 
 test("R13 keeps all central aisles traversable with wall clamping", () => {
-  let pos = { ...FLOOR3D_SPAWN };
+  let pos: { x: number; z: number } = { ...FLOOR3D_SPAWN };
   for (let i = 0; i < 260; i++) {
     pos = advanceFloor3DCamera(pos.x, pos.z, 0, -0.12);
     assert.equal(collidesFloor3DTable(pos.x, pos.z), false);
