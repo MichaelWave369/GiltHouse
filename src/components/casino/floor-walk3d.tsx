@@ -32,10 +32,12 @@ export function FloorWalk3D({
   onClose,
   onChoose,
   returnPose,
+  onBackTo3DLobby,
 }: {
   onClose: () => void;
   onChoose: (game: FloorGame, pose: Floor3DPose) => void;
   returnPose: Floor3DPose | null;
+  onBackTo3DLobby?: () => void;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const roomRef = useRef<HTMLDivElement>(null);
@@ -527,6 +529,12 @@ export function FloorWalk3D({
             className="press min-h-11 rounded-full border border-gold/70 bg-ink-2 px-4 text-sm text-gold">
             {mapOpen ? "Hide floor map" : "Show floor map"}
           </button>
+          {onBackTo3DLobby ? (
+            <button type="button" onClick={onBackTo3DLobby}
+              className="press min-h-11 rounded-full border border-gold bg-gold/15 px-4 text-sm font-semibold text-gold">
+              Back to 3D Grand Lobby
+            </button>
+          ) : null}
           <button type="button" onClick={onClose}
             className="press min-h-11 rounded-full border border-gold px-4 text-sm text-gold">
             Back to casino directory
