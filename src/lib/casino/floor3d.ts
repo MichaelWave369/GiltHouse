@@ -92,7 +92,7 @@ export function normalizeFloor3DPose(pose: Floor3DPose | null | undefined): Floo
  */
 export const FLOOR3D_TABLE_CLEARANCE_X = 1.88;
 export const FLOOR3D_TABLE_CLEARANCE_Z = 1.46;
-export const FLOOR3D_MAX_FRAME_MOVE = 0.4;
+export const FLOOR3D_MAX_FRAME_MOVE = 0.85;
 const FLOOR3D_SWEEP_STEP = 0.08;
 const COLLISION_EPS = 0.02;
 
