@@ -62,3 +62,24 @@ export function nearestFloor3DTable(x: number, z: number): FloorStation | null {
 export function canOpenFloor3DTable(game: string, x: number, z: number): boolean {
   return validFloor3DGame(game) && nearestFloor3DTable(x, z)?.game === game;
 }
+
+/**
+ * R12 ephemeral showroom camera handoff. This object is held only in
+ * CasinoApp React memory while travelling to/from a game table.
+ * It is never stored in the casino, world or browser save.
+ */
+export type Floor3DPose = Readonly<{ x: number; z: number; yaw: number }>;
+export const FLOOR3D_START_POSE: Floor3DPose =
+  Object.freeze({ x: FLOOR3D_SPAWN.x, z: FLOOR3D_SPAWN.z, yaw: 0 });
+export const FLOOR3D_MAX_YAW = 1.4;
+
+export function normalizeFloor3DPose(pose: Floor3DPose | null | undefined): Floor3DPose {
+  if (!pose) return { ...FLOOR3D_START_POSE };
+  const pos = clampFloor3DCamera(pose.x, pose.z);
+  return {
+    ...pos,
+    yaw: Number.isFinite(pose.yaw)
+      ? Math.max(-FLOOR3D_MAX_YAW, Math.min(FLOOR3D_MAX_YAW, pose.yaw))
+      : 0,
+  };
+}
