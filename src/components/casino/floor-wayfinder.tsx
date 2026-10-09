@@ -64,7 +64,7 @@ export function Floor3DWayfinder({
             <polyline points={path} fill="none" stroke="#ffd274" strokeWidth="3"
               strokeLinejoin="round" strokeLinecap="round" strokeDasharray="5 4" />
           )}
-          <g transform={`translate(${px(pose.x)} ${py(pose.z)}) rotate(${-pose.yaw * 180 / Math.PI})`}>
+          <g transform={`translate(${px(pose.x)} ${py(pose.z)}) rotate(${pose.yaw * 180 / Math.PI})`}>
             <path d="M0 -12 L7 8 L0 4 L-7 8 Z" fill="#8de6ff" stroke="#0e3547" strokeWidth="2" />
           </g>
           <text x="130" y="365" textAnchor="middle" fontSize="10" fill="#ebce96">ENTRANCE / SOUTH</text>
