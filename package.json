@@ -21,7 +21,8 @@
     "format": "prettier --write .",
     "build:pages": "vite build --config pages-static/vite.config.ts",
     "typecheck:pages": "tsc --noEmit -p pages-static/tsconfig.json",
-    "check:pages": "node scripts/check-pages-dist.mjs"
+    "check:pages": "node scripts/check-pages-dist.mjs",
+    "check:pages:browser": "node scripts/check-pages-browser.mjs"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.4",

@@ -5,7 +5,7 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
 import { GiltHouseShell } from "@/components/world/shell";
-import "@/styles.css";
+import "./styles.css";
 
 const node = document.getElementById("root");
 if (!node) throw new Error("Gilt House Pages mount point is missing.");

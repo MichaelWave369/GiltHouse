@@ -1,0 +1,12 @@
+/*
+ * The Pages Vite config uses pages-static/ as its root. Tailwind v4's
+ * automatic content discovery otherwise misses most of ../src and generates
+ * a stylesheet with resets but without the game's utility classes.
+ *
+ * Point the Pages build explicitly at the original React/Canvas application.
+ * This wrapper is used ONLY by the static entry point; the original hosted
+ * app's src/styles.css and Vite config remain unchanged.
+ */
+@import "../src/styles.css";
+@source "../src";
+@source ".";
