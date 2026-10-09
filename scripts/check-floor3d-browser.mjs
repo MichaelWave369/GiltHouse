@@ -31,7 +31,9 @@ try {
   }
   assert.ok(running, `Pages preview did not start: ${output}`);
   browser = await chromium.launch({ headless: true });
-  const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+  // Use a moderate software-rendering resolution; desktop/mobile layout is
+  // already separately qualified at full sizes in check-pages-browser.
+  const page = await browser.newPage({ viewport: { width: 960, height: 680 }, deviceScaleFactor: 0.75 });
   const errors = [];
   page.on("pageerror", (error) => errors.push(error.message));
   try {
