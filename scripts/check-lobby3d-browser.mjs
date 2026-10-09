@@ -30,7 +30,9 @@ try {
   }
   assert.ok(running, `Static preview didn't start: ${output}`);
   browser = await chromium.launch({ headless: true });
-  const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+  // Layout gets dedicated full-resolution browser QA elsewhere. Keep this
+  // actual GPU movement probe responsive on GitHub's software renderer.
+  const page = await browser.newPage({ viewport: { width: 960, height: 680 }, deviceScaleFactor: 0.75 });
   const errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
   try {
@@ -56,6 +58,37 @@ try {
     await room.waitFor({ state: "visible" });
     await room.getByRole("button", { name: /THE FLOOR/ }).waitFor({ state: "visible" });
     await room.getByRole("button", { name: /TRAINING LAB/ }).waitFor({ state: "visible" });
+
+    // R17: exercise actual WebGL keyboard movement against a gold column
+    // at x=-7.9,z=8. The camera/body should stop around x=-7.27, rather
+    // than walking through the pillar until the original wall bound -7.4.
+    await page.waitForFunction(() =>
+      Boolean(document.querySelector('output[aria-label="3D grand lobby position"]')) ||
+      document.body.textContent?.includes("3D graphics could not start on this device."),
+      null, { timeout: 15000 });
+    const hud = room.getByLabel("3D grand lobby position");
+    if (await hud.isVisible()) {
+      await room.focus();
+      await page.keyboard.down("a");
+      try {
+        await page.waitForFunction(() => {
+          const node = document.querySelector('output[aria-label="3D grand lobby position"]');
+          return node && Number(node.getAttribute("data-x")) < -6.8;
+        }, null, { timeout: 18000 });
+        await page.waitForTimeout(900);
+      } finally {
+        await page.keyboard.up("a");
+      }
+      await page.waitForTimeout(350);
+      const x = Number(await hud.getAttribute("data-x"));
+      const z = Number(await hud.getAttribute("data-z"));
+      assert.ok(x < -6.8 && x > -7.30,
+        `R17 solid gilded pillar must block before wall (x=${x})`);
+      assert.ok(Math.abs(z - 8) < 0.12, `strafe shouldn't alter Z: ${z}`);
+      console.log(`PASS: R17 real WebGL movement blocked by solid gilded pillar at x=${x}, z=${z}`);
+    } else {
+      console.log("SKIP: lobby GPU collision probe unavailable; all physical collision paths unit tested and accessible HTML routes remain tested.");
+    }
     await room.getByRole("button", { name: "Back to 16-bit lobby" }).click();
     await room.waitFor({ state: "detached" });
     await page.getByRole("button", { name: "Enter 3D lobby" }).click();
@@ -67,7 +100,7 @@ try {
     assert.equal(await page.evaluate(() => localStorage.getItem("gilt-house-v1")), before,
       "3D lobby and Training Lab navigation must not change play-chip storage");
     assert.deepEqual(errors, [], "No unhandled browser exceptions during 3D navigation");
-    console.log("PASS: optional 3D room opens, closes to existing 2D lobby, enters Training Lab and returns with no chip changes.");
+    console.log("PASS: R17 solid grand-lobby geometry verified in WebGL where available; 3D opens, returns to 2D, enters Training Lab and keeps chip purse unchanged.");
   } finally {
     await page.close();
   }
