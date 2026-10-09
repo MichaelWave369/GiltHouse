@@ -27,6 +27,7 @@ import {
   type Aim,
 } from "./logic.ts";
 import { encounterById } from "./content.ts";
+import { canReturnTo3DLobby, canStart3DFloorFromLobby } from "./lobby3d.ts";
 
 export type Panel = "none" | "title" | "create" | "intro" | "chapter" | "pause" | "inventory" | "journal" | "map" | "help" | "shop" | "agent-desk" | "lobby-3d";
 
@@ -35,6 +36,8 @@ type Talk = { kind: TalkKind; id: string; nodeId: string };
 type WorldStore = {
   world: ReturnType<typeof defaultWorld>;
   mode: "street" | "casino";
+  /** R18 temporary view provenance, never part of saved World. */
+  casino3DFromLobby: boolean;
   booted: boolean;
   recovered: boolean;
   panel: Panel;
@@ -63,6 +66,8 @@ type WorldStore = {
   setToast: (toast: string | null) => void;
   setPrefs: (patch: Partial<ReturnType<typeof defaultWorld>["prefs"]>) => void;
   enterCasino: (view: CasinoDoor) => void;
+  enterCasino3DFromLobby: () => void;
+  returnTo3DLobby: () => void;
   leaveCasino: () => void;
   finishArcade: (score: number, total: number) => void;
   closeArcade: () => void;
@@ -92,6 +97,7 @@ function resumeAfterTitle(world: ReturnType<typeof defaultWorld>): Panel {
 export const useWorld = create<WorldStore>((set, get) => ({
   world: defaultWorld(),
   mode: "street",
+  casino3DFromLobby: false,
   booted: false,
   recovered: false,
   panel: "none",
@@ -142,6 +148,7 @@ export const useWorld = create<WorldStore>((set, get) => ({
     set({
       world: defaultWorld(),
       mode: "street",
+      casino3DFromLobby: false,
       panel: "create",
       talk: null,
       arcade: null,
@@ -239,12 +246,31 @@ export const useWorld = create<WorldStore>((set, get) => ({
   },
   enterCasino: (view) => {
     useCasino.getState().setView(casinoView(view));
-    set({ mode: "casino", panel: "none", talk: null, arcade: null });
+    set({ mode: "casino", casino3DFromLobby: false, panel: "none", talk: null, arcade: null });
     get().save();
+  },
+  enterCasino3DFromLobby: () => {
+    const state = get();
+    if (!canStart3DFloorFromLobby({
+      scene: state.world.scene, mode: state.mode, panel: state.panel,
+      hasTalk: state.talk !== null, hasArcade: state.arcade !== null,
+    })) return;
+    // Only a display handoff; no chip balance, bets, saves or permissions.
+    useCasino.getState().setView("floor");
+    set({ mode: "casino", casino3DFromLobby: true, panel: "none", talk: null, arcade: null });
+  },
+  returnTo3DLobby: () => {
+    const state = get();
+    if (!canReturnTo3DLobby({
+      scene: state.world.scene, mode: state.mode, panel: state.panel,
+      hasTalk: state.talk !== null, hasArcade: state.arcade !== null,
+    }, state.casino3DFromLobby)) return;
+    useCasino.getState().setView("floor");
+    set({ mode: "street", casino3DFromLobby: false, panel: "lobby-3d" });
   },
   leaveCasino: () => {
     useCasino.getState().setView("floor");
-    set({ mode: "street" });
+    set({ mode: "street", casino3DFromLobby: false, panel: "none" });
   },
   finishArcade: (score, total) => {
     const game = get().arcade;
@@ -262,6 +288,7 @@ export const useWorld = create<WorldStore>((set, get) => ({
     set({
       world,
       mode: "street",
+      casino3DFromLobby: false,
       panel: "none",
       talk: null,
       arcade: null,
