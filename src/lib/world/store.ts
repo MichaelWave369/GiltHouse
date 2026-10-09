@@ -28,7 +28,7 @@ import {
 } from "./logic.ts";
 import { encounterById } from "./content.ts";
 
-export type Panel = "none" | "title" | "create" | "intro" | "chapter" | "pause" | "inventory" | "journal" | "map" | "help" | "shop" | "agent-desk";
+export type Panel = "none" | "title" | "create" | "intro" | "chapter" | "pause" | "inventory" | "journal" | "map" | "help" | "shop" | "agent-desk" | "lobby-3d";
 
 type Talk = { kind: TalkKind; id: string; nodeId: string };
 
@@ -154,7 +154,15 @@ export const useWorld = create<WorldStore>((set, get) => ({
     set({ world, panel: "none", talk: null });
     get().save();
   },
-  openPanel: (panel) => set({ panel, talk: panel === "none" ? get().talk : null }),
+  openPanel: (panel) => {
+    // R9: the 3D showcase cannot be summoned as a shortcut into the casino
+    // from another scene, and cannot interrupt a dialogue/arcade session.
+    if (panel === "lobby-3d" &&
+        (get().world.scene !== "gilt-lobby" || get().mode !== "street" ||
+         get().talk !== null || get().arcade !== null ||
+         (get().panel !== "none" && get().panel !== "pause"))) return;
+    set({ panel, talk: panel === "none" ? get().talk : null });
+  },
   closePanel: () => set({ panel: "none" }),
   move: (dir, dt) => {
     const blocked = get().panel !== "none" && get().panel !== "intro";
